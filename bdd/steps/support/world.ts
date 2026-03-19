@@ -1,5 +1,5 @@
 import { World, setWorldConstructor, Before, After } from '@cucumber/cucumber';
-import { ChildProcess, spawn, execSync } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import * as path from 'path';
 
 interface HttpResponse {
@@ -7,16 +7,10 @@ interface HttpResponse {
   body: string;
 }
 
-interface CucumberRunResult {
-  exitCode: number;
-  output: string;
-}
-
 export class ServerWorld extends World {
   serverProcess: ChildProcess | null = null;
   serverPort: number | null = null;
   lastResponse: HttpResponse | null = null;
-  lastCucumberResult: CucumberRunResult | null = null;
 
   async startServer(): Promise<void> {
     const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -127,38 +121,6 @@ export class ServerWorld extends World {
     return { status: response.status, body };
   }
 
-  runCucumberOnFeature(featureContent: string): CucumberRunResult {
-    const fs = require('fs');
-    const os = require('os');
-
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bdd-test-'));
-    const featureFile = path.join(tmpDir, 'test.feature');
-    fs.writeFileSync(featureFile, featureContent);
-
-    const bddDir = path.resolve(__dirname, '..', '..');
-    const cucumberBin = path.join(bddDir, 'node_modules', '.bin', 'cucumber-js');
-
-    try {
-      const output = execSync(
-        `"${cucumberBin}" --require-module ts-node/register --require "${path.join(bddDir, 'steps/**/*.ts')}" "${featureFile}"`,
-        {
-          cwd: bddDir,
-          encoding: 'utf-8',
-          stdio: ['ignore', 'pipe', 'pipe'],
-          timeout: 15000,
-        }
-      );
-      return { exitCode: 0, output };
-    } catch (err: unknown) {
-      const execErr = err as { status: number; stdout: string; stderr: string };
-      return {
-        exitCode: execErr.status ?? 1,
-        output: (execErr.stdout || '') + (execErr.stderr || ''),
-      };
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
-  }
 }
 
 setWorldConstructor(ServerWorld);
