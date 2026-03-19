@@ -15,7 +15,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class TestHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for BDD test server."""
+
     def do_GET(self) -> None:
+        """Route GET requests to health endpoint or 404."""
         if self.path == "/health":
             self._respond(200, {"status": "ok"})
         else:
@@ -34,6 +37,7 @@ class TestHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    """Start the test server on the given port and print PORT=<N> to stdout."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=0)
     args = parser.parse_args()
