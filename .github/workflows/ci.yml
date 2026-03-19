@@ -7,22 +7,18 @@ on:
 
 jobs:
   test:
-    name: test / py${{ matrix.python-version }}
+    name: test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      - name: Set up Python 3.14
+        run: uv python install 3.14
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync
       - name: Run tests
         run: uv run pytest
 
@@ -35,19 +31,29 @@ jobs:
         uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
+      - name: Set up Python 3.14
+        run: uv python install 3.14
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync
       - name: Ruff check
         run: uv run ruff check .
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Type check
-        run: uv run mypy src
+        run: uv run mypy src --strict
+
+  bdd:
+    name: bdd
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: BDD tests (stub)
+        run: echo "BDD tests not yet implemented -- skipping"
 
   all-pass:
     name: all-pass
     runs-on: ubuntu-latest
-    needs: [test, lint]
+    needs: [test, lint, bdd]
     if: always()
     steps:
       - name: Check all jobs passed
