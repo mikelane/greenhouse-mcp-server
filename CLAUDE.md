@@ -80,12 +80,18 @@ uv run greenhouse-mcp --transport sse --port 8080
 
 ## Code Standards
 
-- Python 3.12+
-- Type hints on all public functions (mypy --strict)
-- ruff for linting and formatting
+- Python 3.14 (bleeding edge — portfolio piece)
+- Type hints on all public functions (`mypy --strict`)
+- ruff for linting and formatting (aggressive rule set)
 - pytest for testing, with mock Greenhouse API responses (no live API calls in tests)
-- Google test size taxonomy: tests are small by default (no I/O, no network)
+- Google test size taxonomy enforced by `pytest-test-categories` in strict mode (small by default: no I/O, no network, no sleep, single-threaded)
 - TDD: write the test first, watch it fail, write minimal code to pass
+- 100% line AND branch coverage — no exceptions
+- `pytest-gremlins` mutation testing at 100% — no surviving mutants
+- `dioxide` for dependency injection — strict adherence to the Dependency Inversion Principle from day one
+- Tests only test **behaviors** via the public API — never test implementation details
+- BDD with Gherkin (cucumber-js / TypeScript) — separate language to enforce black-box testing
+- Narrated `.mp4` capstone demo for every epic (ElevenLabs TTS, no exceptions)
 
 ## File Structure (target)
 
@@ -94,8 +100,10 @@ greenhouse-mcp-server/
 ├── src/
 │   └── greenhouse_mcp/
 │       ├── __init__.py
-│       ├── server.py          # FastMCP server + tool definitions
-│       ├── client.py          # Async Greenhouse API client
+│       ├── server.py          # FastMCP server + tool registration
+│       ├── container.py       # dioxide DI container
+│       ├── ports.py           # Abstract interfaces (protocols)
+│       ├── client.py          # Async Greenhouse API client (adapter)
 │       ├── models.py          # Pydantic models for API responses
 │       └── tools/
 │           ├── __init__.py
@@ -104,7 +112,7 @@ greenhouse-mcp-server/
 │           ├── attention.py   # needs_attention tool
 │           ├── velocity.py    # hiring_velocity tool
 │           └── search.py      # search_talent tool
-├── tests/
+├── tests/                     # Python unit tests (small, hermetic)
 │   ├── conftest.py            # Shared fixtures, mock API responses
 │   ├── test_client.py
 │   ├── test_pipeline.py
@@ -112,6 +120,28 @@ greenhouse-mcp-server/
 │   ├── test_attention.py
 │   ├── test_velocity.py
 │   └── test_search.py
+├── features/                  # Gherkin feature files
+│   ├── pipeline_health.feature
+│   ├── candidate_dossier.feature
+│   ├── needs_attention.feature
+│   ├── hiring_velocity.feature
+│   └── search_talent.feature
+├── bdd/                       # TypeScript cucumber step definitions
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── cucumber.js
+│   └── steps/
+│       ├── support/
+│       │   └── world.ts       # Cucumber World (HTTP client to Python server)
+│       ├── pipeline.steps.ts
+│       ├── candidate.steps.ts
+│       ├── attention.steps.ts
+│       ├── velocity.steps.ts
+│       └── search.steps.ts
+├── docs/
+│   ├── decisions/             # ADRs from spikes and implementation
+│   └── plans/                 # Design documents
+├── scripts/                   # CI/quality gate scripts
 ├── pyproject.toml
 ├── CLAUDE.md
 ├── README.md
