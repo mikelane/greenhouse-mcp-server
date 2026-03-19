@@ -58,13 +58,13 @@ jobs:
       - name: Install dependencies
         run: uv sync
       - name: Run mutation testing
-        uses: mikelane/pytest-gremlins-action@main
-        with:
-          python-version: '3.14'
-          parallel: 'true'
-          cache: 'true'
-          ratchet-file: '.gremlins-score'
-          pr-comment: 'true'
+        run: uv run pytest --gremlins --gremlin-report=json --gremlin-parallel --gremlin-cache -o "addopts="
+      - name: Ratchet check
+        run: |
+          SCORE=$(python3 -c "import json; r=json.load(open('.gremlin-report.json')); print(round(r['zapped']/(r['zapped']+r['survived'])*100, 1) if r['zapped']+r['survived']>0 else 100)")
+          THRESHOLD=$(cat .gremlins-score 2>/dev/null || echo 0)
+          echo "Mutation score: ${SCORE}% (threshold: ${THRESHOLD}%)"
+          python3 -c "import sys; sys.exit(0 if float('${SCORE}') >= float('${THRESHOLD}') else 1)"
 
   bdd:
     name: bdd
