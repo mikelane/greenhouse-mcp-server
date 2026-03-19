@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies
         run: uv sync
       - name: Run mutation testing
-        uses: mikelane/pytest-gremlins-action@v1.1.1
+        uses: mikelane/pytest-gremlins-action@v1.1.2
         with:
           command-prefix: 'uv run'
           skip-install: 'true'
