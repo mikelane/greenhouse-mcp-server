@@ -10,3 +10,5 @@ dist/
 coverage.json
 htmlcov/
 .env
+bdd/node_modules/
+bdd/dist/

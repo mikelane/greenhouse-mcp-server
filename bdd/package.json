@@ -1,0 +1,15 @@
+{
+  "name": "greenhouse-mcp-bdd",
+  "version": "0.0.1",
+  "private": true,
+  "description": "BDD step definitions for greenhouse-mcp-server",
+  "scripts": {
+    "test": "cucumber-js",
+    "test:wip": "cucumber-js --tags @wip"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}
