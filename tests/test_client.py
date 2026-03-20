@@ -1112,9 +1112,7 @@ class DescribeProactiveRateLimitBackoff:
         async def tracking_sleep(seconds: float) -> None:
             sleep_durations.append(seconds)
 
-        transport = httpx.MockTransport(
-            lambda _request: _make_response(json_data=[])
-        )
+        transport = httpx.MockTransport(lambda _request: _make_response(json_data=[]))
         client = _build_client(
             transport,
             rate_limit_safety_margin=5,
