@@ -38,6 +38,9 @@ dev = [
     "ruff>=0.15",
 ]
 
+[tool.coverage.run]
+omit = ["src/greenhouse_mcp/ports.py"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/greenhouse_mcp"]
 
