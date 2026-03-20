@@ -48,7 +48,7 @@ _BACKOFF_MULTIPLIER = 2
 
 async def _default_sleep(seconds: float) -> None:
     """Sleep for the given number of seconds using asyncio."""
-    await asyncio.sleep(seconds)
+    await asyncio.sleep(seconds)  # pragma: no cover
 
 
 def _extract_message(response: httpx.Response) -> str:
