@@ -1,0 +1,80 @@
+[
+  {
+    "name": "intro",
+    "text": "This is greenhouse mcp server, an MCP server that gives AI agents workflow-oriented access to the Greenhouse recruiting platform. Let me show you what we built for the foundation.",
+    "duration": 12.54,
+    "clip": "milestone1_intro.mp3"
+  },
+  {
+    "name": "uv_sync",
+    "text": "First, the project scaffold. Python 3.14. We run uv sync, and 83 packages install, including dioxide for dependency injection, pytest gremlins for mutation testing, and pytest test categories for enforcing Google test sizes.",
+    "duration": 17.69,
+    "clip": "milestone1_uv_sync.mp3"
+  },
+  {
+    "name": "ruff_check",
+    "text": "Ruff with 30 rule categories enabled. Security, complexity, annotations, naming. All checks pass.",
+    "duration": 5.76,
+    "clip": "milestone1_ruff_check.mp3"
+  },
+  {
+    "name": "mypy_strict",
+    "text": "Mypy in strict mode. No any types, no untyped definitions, no escapes. Every function, every parameter, every return value is fully typed. Zero issues across all source files.",
+    "duration": 11.05,
+    "clip": "milestone1_mypy_strict.mp3"
+  },
+  {
+    "name": "pytest_run",
+    "text": "Pytest with 100 percent line and branch coverage enforced as a gate. 123 tests, all classified as small, meaning no IO, no network, no sleep, single threaded. The test distribution report confirms it.\n\n<!-- SECTION: bdd -->",
+    "duration": 13.47,
+    "clip": "milestone1_pytest_run.mp3"
+  },
+  {
+    "name": "bdd_intro",
+    "text": "Next, the cross-language BDD infrastructure. Step definitions are in TypeScript, not Python, so you physically cannot import production internals. Black box testing is structurally enforced.",
+    "duration": 12.03,
+    "clip": "milestone1_bdd_intro.mp3"
+  },
+  {
+    "name": "bdd_run",
+    "text": "Cucumber JS starts a Python test server as a subprocess, discovers the port via standard out, polls the health endpoint until ready, then runs the Gherkin scenarios. Two scenarios, seven steps, all passing in about six seconds.\n\n<!-- SECTION: client -->",
+    "duration": 13.65,
+    "clip": "milestone1_bdd_run.mp3"
+  },
+  {
+    "name": "client_intro",
+    "text": "The Greenhouse API client is the core of the system. It handles authentication, rate limiting, pagination, and retries behind a protocol interface for dependency injection.",
+    "duration": 10.73,
+    "clip": "milestone1_client_intro.mp3"
+  },
+  {
+    "name": "client_tests",
+    "text": "123 tests cover auth, rate limiting, pagination, retries, and error handling. All through the public API, no mocking of internals. The client talks to httpx mock transports that simulate the real Greenhouse API.",
+    "duration": 16.21,
+    "clip": "milestone1_client_tests.mp3"
+  },
+  {
+    "name": "mutation",
+    "text": "And the mutation testing score: 55 gremlins tested, 55 killed, zero survivors. 100 percent mutation coverage. Every boundary condition, every comparison operator, every backoff calculation is verified by at least one test that would fail if the code were mutated.\n\n<!-- SECTION: server -->",
+    "duration": 16.86,
+    "clip": "milestone1_mutation.mp3"
+  },
+  {
+    "name": "server_intro",
+    "text": "Finally, the MCP server shell. FastMCP wired with dioxide dependency injection using the lifespan plus depends pattern from our architecture decision record.",
+    "duration": 8.45,
+    "clip": "milestone1_server_intro.mp3"
+  },
+  {
+    "name": "server_pattern",
+    "text": "The lifespan context manager creates the dioxide container on startup. Depends factory functions resolve ports from that container. Tool handlers declare their dependencies as typed parameters, and FastMCP hides them from the MCP schema. Clean signatures, proper lifecycle, fully testable.",
+    "duration": 17.88,
+    "clip": "milestone1_server_pattern.mp3"
+  },
+  {
+    "name": "closing",
+    "text": "Thats the foundation. Every line covered, every mutant killed, every type checked. Next up: the recruiting workflow tools.",
+    "duration": 7.85,
+    "clip": "milestone1_closing.mp3"
+  }
+]
