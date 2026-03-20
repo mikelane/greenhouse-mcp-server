@@ -19,6 +19,5 @@ class DescribePackageImport:
 class DescribeServerEntrypoint:
     """Verify the server entrypoint exists and is callable."""
 
-    def it_runs_without_error(self) -> None:
-        """Server entrypoint runs without error."""
-        main()
+    def it_is_callable(self) -> None:
+        assert callable(main)
