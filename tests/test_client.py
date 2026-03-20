@@ -9,7 +9,10 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 import httpx
 import pytest
@@ -48,12 +51,17 @@ def _make_response(
     )
 
 
+async def _noop_sleep(_seconds: float) -> None:
+    """No-op sleep for testing -- avoids real delays."""
+
+
 def _build_client(
     handler: httpx.MockTransport | None = None,
     *,
     api_token: str = "test-token-abc",  # noqa: S107
     max_retries: int = 0,
     rate_limit_safety_margin: int = 5,
+    sleep_fn: Callable[[float], Awaitable[None]] = _noop_sleep,
 ) -> GreenhouseClient:
     """Build a GreenhouseClient with a MockTransport."""
     if handler is None:
@@ -63,6 +71,7 @@ def _build_client(
         http_client=httpx.AsyncClient(transport=handler, base_url="https://harvest.greenhouse.io/v1"),
         max_retries=max_retries,
         rate_limit_safety_margin=rate_limit_safety_margin,
+        sleep_fn=sleep_fn,
     )
 
 
@@ -902,3 +911,271 @@ class DescribeNonListPageData:
         client = _build_client(httpx.MockTransport(handler))
         result = await client.get_jobs()
         assert result == [{"id": 1}]
+
+
+@pytest.mark.small
+class DescribePaginationRetry:
+    @pytest.mark.anyio
+    async def it_retries_429_on_second_page_instead_of_crashing(self) -> None:
+        call_count = 0
+
+        def handler(_request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return _make_response(
+                    json_data=[{"id": 1}],
+                    headers={
+                        "Link": '<https://harvest.greenhouse.io/v1/jobs?page=2&per_page=500>; rel="next"',
+                    },
+                )
+            if call_count == 2:  # noqa: PLR2004
+                return _make_response(
+                    status_code=429,
+                    json_data={"message": "Rate limit"},
+                    headers={"Retry-After": "0"},
+                )
+            return _make_response(json_data=[{"id": 2}])
+
+        client = _build_client(httpx.MockTransport(handler), max_retries=2)
+        result = await client.get_jobs()
+        assert result == [{"id": 1}, {"id": 2}]
+        assert call_count == 3  # noqa: PLR2004
+
+    @pytest.mark.anyio
+    async def it_retries_500_on_second_page_instead_of_crashing(self) -> None:
+        call_count = 0
+
+        def handler(_request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return _make_response(
+                    json_data=[{"id": 1}],
+                    headers={
+                        "Link": '<https://harvest.greenhouse.io/v1/jobs?page=2&per_page=500>; rel="next"',
+                    },
+                )
+            if call_count == 2:  # noqa: PLR2004
+                return _make_response(
+                    status_code=500,
+                    json_data={"message": "Server error"},
+                )
+            return _make_response(json_data=[{"id": 2}])
+
+        client = _build_client(httpx.MockTransport(handler), max_retries=2)
+        result = await client.get_jobs()
+        assert result == [{"id": 1}, {"id": 2}]
+        assert call_count == 3  # noqa: PLR2004
+
+    @pytest.mark.anyio
+    async def it_raises_after_exhausting_retries_on_paginated_429(self) -> None:
+        call_count = 0
+
+        def handler(_request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return _make_response(
+                    json_data=[{"id": 1}],
+                    headers={
+                        "Link": '<https://harvest.greenhouse.io/v1/jobs?page=2&per_page=500>; rel="next"',
+                    },
+                )
+            return _make_response(
+                status_code=429,
+                json_data={"message": "Rate limit"},
+                headers={"Retry-After": "0"},
+            )
+
+        client = _build_client(httpx.MockTransport(handler), max_retries=1)
+        with pytest.raises(RateLimitError):
+            await client.get_jobs()
+
+
+@pytest.mark.small
+class DescribeExponentialBackoff:
+    @pytest.mark.anyio
+    async def it_sleeps_with_increasing_delays_between_retries_on_5xx(self) -> None:
+        sleep_durations: list[float] = []
+
+        async def tracking_sleep(seconds: float) -> None:
+            sleep_durations.append(seconds)
+
+        call_count = 0
+
+        def handler(_request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 3:  # noqa: PLR2004
+                return _make_response(
+                    status_code=500,
+                    json_data={"message": "Server error"},
+                )
+            return _make_response(json_data=[{"id": 1}])
+
+        client = _build_client(
+            httpx.MockTransport(handler),
+            max_retries=3,
+            sleep_fn=tracking_sleep,
+        )
+        result = await client.get_jobs()
+        assert result == [{"id": 1}]
+        assert len(sleep_durations) == 3  # noqa: PLR2004
+        assert sleep_durations[1] > sleep_durations[0]
+        assert sleep_durations[2] > sleep_durations[1]
+
+    @pytest.mark.anyio
+    async def it_honors_retry_after_header_on_429(self) -> None:
+        sleep_durations: list[float] = []
+
+        async def tracking_sleep(seconds: float) -> None:
+            sleep_durations.append(seconds)
+
+        call_count = 0
+
+        def handler(_request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return _make_response(
+                    status_code=429,
+                    json_data={"message": "Rate limit"},
+                    headers={"Retry-After": "7"},
+                )
+            return _make_response(json_data=[{"id": 1}])
+
+        client = _build_client(
+            httpx.MockTransport(handler),
+            max_retries=2,
+            sleep_fn=tracking_sleep,
+        )
+        result = await client.get_jobs()
+        assert result == [{"id": 1}]
+        assert len(sleep_durations) == 1
+        assert sleep_durations[0] == 7.0  # noqa: PLR2004
+
+    @pytest.mark.anyio
+    async def it_does_not_sleep_before_the_first_attempt(self) -> None:
+        sleep_durations: list[float] = []
+
+        async def tracking_sleep(seconds: float) -> None:
+            sleep_durations.append(seconds)
+
+        def handler(_request: httpx.Request) -> httpx.Response:
+            return _make_response(json_data=[{"id": 1}])
+
+        client = _build_client(
+            httpx.MockTransport(handler),
+            max_retries=3,
+            sleep_fn=tracking_sleep,
+        )
+        await client.get_jobs()
+        assert sleep_durations == []
+
+
+@pytest.mark.small
+class DescribeProactiveRateLimitBackoff:
+    @pytest.mark.anyio
+    async def it_sleeps_when_remaining_requests_at_safety_margin(self) -> None:
+        sleep_durations: list[float] = []
+
+        async def tracking_sleep(seconds: float) -> None:
+            sleep_durations.append(seconds)
+
+        transport = httpx.MockTransport(
+            lambda _request: _make_response(
+                json_data=[],
+                headers={
+                    "X-RateLimit-Remaining": "50",
+                    "X-RateLimit-Reset": str(int(time.time()) + 10),
+                },
+            )
+        )
+        client = _build_client(
+            transport,
+            rate_limit_safety_margin=5,
+            sleep_fn=tracking_sleep,
+        )
+        client.rate_limit_remaining = 3
+        client.rate_limit_reset = int(time.time()) + 5
+
+        await client.get_jobs()
+
+        assert len(sleep_durations) == 1
+        assert sleep_durations[0] > 0
+
+    @pytest.mark.anyio
+    async def it_does_not_sleep_when_remaining_above_safety_margin(self) -> None:
+        sleep_durations: list[float] = []
+
+        async def tracking_sleep(seconds: float) -> None:
+            sleep_durations.append(seconds)
+
+        transport = httpx.MockTransport(
+            lambda _request: _make_response(json_data=[])
+        )
+        client = _build_client(
+            transport,
+            rate_limit_safety_margin=5,
+            sleep_fn=tracking_sleep,
+        )
+        client.rate_limit_remaining = 20
+
+        await client.get_jobs()
+
+        assert sleep_durations == []
+
+    @pytest.mark.anyio
+    async def it_does_not_sleep_when_reset_time_is_in_the_past(self) -> None:
+        sleep_durations: list[float] = []
+
+        async def tracking_sleep(seconds: float) -> None:
+            sleep_durations.append(seconds)
+
+        transport = httpx.MockTransport(
+            lambda _request: _make_response(
+                json_data=[],
+                headers={
+                    "X-RateLimit-Remaining": "50",
+                    "X-RateLimit-Reset": str(int(time.time()) + 10),
+                },
+            )
+        )
+        client = _build_client(
+            transport,
+            rate_limit_safety_margin=5,
+            sleep_fn=tracking_sleep,
+        )
+        client.rate_limit_remaining = 0
+        client.rate_limit_reset = int(time.time()) - 10
+
+        await client.get_jobs()
+
+        assert sleep_durations == [] or all(d <= 0 for d in sleep_durations)
+
+
+@pytest.mark.small
+class DescribeLastExceptionTracking:
+    @pytest.mark.anyio
+    async def it_raises_the_last_exception_after_exhausting_retries(self) -> None:
+        call_count = 0
+
+        def handler(_request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:  # noqa: PLR2004
+                return _make_response(
+                    status_code=500,
+                    json_data={"message": f"Server error attempt {call_count}"},
+                )
+            return _make_response(
+                status_code=502,
+                json_data={"message": "Bad gateway final"},
+            )
+
+        client = _build_client(httpx.MockTransport(handler), max_retries=2)
+        with pytest.raises(ServerError, match="Bad gateway final") as exc_info:
+            await client.get_jobs()
+        assert exc_info.value.status_code == 502  # noqa: PLR2004
+        assert call_count == 3  # noqa: PLR2004

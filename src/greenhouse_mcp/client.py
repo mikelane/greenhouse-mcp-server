@@ -6,11 +6,16 @@ Link header pagination, and exponential backoff retries.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import re
-from typing import Any
+import time
+from typing import TYPE_CHECKING, Any
 
 import httpx
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 from greenhouse_mcp.exceptions import (
     AuthenticationError,
@@ -35,6 +40,15 @@ _HTTP_NOT_FOUND = 404
 _HTTP_UNPROCESSABLE = 422
 _HTTP_TOO_MANY_REQUESTS = 429
 _HTTP_SERVER_ERROR = 500
+
+# Backoff constants
+_BACKOFF_BASE_SECONDS = 1.0
+_BACKOFF_MULTIPLIER = 2
+
+
+async def _default_sleep(seconds: float) -> None:
+    """Sleep for the given number of seconds using asyncio."""
+    await asyncio.sleep(seconds)
 
 
 def _extract_message(response: httpx.Response) -> str:
@@ -102,6 +116,7 @@ class GreenhouseClient:
         http_client: httpx.AsyncClient | None = None,
         max_retries: int = 3,
         rate_limit_safety_margin: int = 5,
+        sleep_fn: Callable[[float], Awaitable[None]] | None = None,
     ) -> None:
         """Initialize the Greenhouse API client.
 
@@ -110,11 +125,13 @@ class GreenhouseClient:
             http_client: Optional pre-configured httpx AsyncClient (for testing).
             max_retries: Maximum retry attempts for 429 and 5xx errors.
             rate_limit_safety_margin: Minimum remaining requests before backing off.
+            sleep_fn: Async callable for delays (injectable for testing).
         """
         self._api_token = api_token
         self._auth_header = "Basic " + base64.b64encode(f"{api_token}:".encode()).decode()
         self._max_retries = max_retries
-        self._rate_limit_safety_margin = rate_limit_safety_margin
+        self._safety_margin = rate_limit_safety_margin
+        self._sleep_fn = sleep_fn or _default_sleep
         self._http_client = http_client or httpx.AsyncClient(base_url=_BASE_URL)
         self.rate_limit_remaining: int = 50
         self.rate_limit_reset: int = 0
@@ -170,10 +187,17 @@ class GreenhouseClient:
 
         raise GreenhouseError(message, status_code=status)
 
+    async def _proactive_backoff(self) -> None:
+        """Sleep until rate limit reset if remaining requests are at or below safety margin."""
+        if self.rate_limit_remaining <= self._safety_margin:
+            wait_seconds = self.rate_limit_reset - time.time()
+            if wait_seconds > 0:
+                await self._sleep_fn(wait_seconds)
+
     async def _request(
         self,
         method: str,
-        path: str,
+        url: str,
         *,
         params: dict[str, Any] | None = None,
     ) -> httpx.Response:
@@ -181,7 +205,7 @@ class GreenhouseClient:
 
         Args:
             method: HTTP method (GET, POST, etc.).
-            path: API path relative to base URL.
+            url: API path relative to base URL, or an absolute URL for pagination.
             params: Query parameters.
 
         Returns:
@@ -194,9 +218,11 @@ class GreenhouseClient:
         last_exception: GreenhouseError | None = None
 
         for attempt in range(self._max_retries + 1):
+            await self._proactive_backoff()
+
             response = await self._http_client.request(
                 method,
-                path,
+                url,
                 params=params,
                 headers={"Authorization": self._auth_header},
             )
@@ -207,13 +233,20 @@ class GreenhouseClient:
             has_retries_left = attempt < self._max_retries
 
             if is_retryable and has_retries_left:
+                try:
+                    self._raise_for_status(response)
+                except (RateLimitError, ServerError) as exc:
+                    last_exception = exc
+                    if isinstance(exc, RateLimitError):
+                        await self._sleep_fn(exc.retry_after)
+                    else:
+                        delay = _BACKOFF_BASE_SECONDS * (_BACKOFF_MULTIPLIER**attempt)
+                        await self._sleep_fn(delay)
                 continue
 
             self._raise_for_status(response)
             return response
 
-        # This line is unreachable because _raise_for_status raises on error
-        # and we return on success, but mypy needs it for type completeness.
         raise last_exception  # type: ignore[misc]  # pragma: no cover
 
     async def _get_list(
@@ -247,13 +280,7 @@ class GreenhouseClient:
             if not next_url:
                 break
 
-            response = await self._http_client.request(
-                "GET",
-                next_url,
-                headers={"Authorization": self._auth_header},
-            )
-            self._update_rate_limits(response)
-            self._raise_for_status(response)
+            response = await self._request("GET", next_url)
             page_data = response.json()
             if isinstance(page_data, list):
                 results.extend(page_data)
