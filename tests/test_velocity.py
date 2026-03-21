@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from greenhouse_mcp.tools.velocity import hiring_velocity
+from greenhouse_mcp.tools.velocity import _build_buckets, hiring_velocity
 
 
 def _iso(days_ago: int) -> str:
@@ -35,11 +35,7 @@ class FakeGreenhouseClient:
     ) -> list[dict[str, Any]]:
         result = self.applications
         if job_id is not None:
-            result = [
-                a
-                for a in result
-                if any(j["id"] == job_id for j in a.get("jobs", []))
-            ]
+            result = [a for a in result if any(j["id"] == job_id for j in a.get("jobs", []))]
         if created_after is not None:
             cutoff = datetime.fromisoformat(created_after)
             if cutoff.tzinfo is None:
@@ -73,14 +69,7 @@ class FakeGreenhouseClient:
     ) -> list[dict[str, Any]]:
         result = self.jobs
         if department_id is not None:
-            result = [
-                j
-                for j in result
-                if any(
-                    d.get("id") == department_id
-                    for d in j.get("departments", [])
-                )
-            ]
+            result = [j for j in result if any(d.get("id") == department_id for d in j.get("departments", []))]
         return result
 
     async def get_job(self, job_id: int) -> dict[str, Any]:
@@ -100,7 +89,9 @@ class FakeGreenhouseClient:
         return []
 
     async def get_scheduled_interviews(
-        self, *, application_id: int | None = None,  # noqa: ARG002
+        self,
+        *,
+        application_id: int | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return []
 
@@ -108,7 +99,10 @@ class FakeGreenhouseClient:
         return {}
 
     async def get_candidates(
-        self, *, job_id: int | None = None, email: str | None = None,  # noqa: ARG002
+        self,
+        *,
+        job_id: int | None = None,  # noqa: ARG002
+        email: str | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return []
 
@@ -237,16 +231,22 @@ class DescribeTrendDirection:
             week_start = now - timedelta(days=(8 - week) * 7)
             count = 1 if week < 4 else 3
             for day_offset in range(count):
-                apps.append({
-                    "id": app_id,
-                    "created_at": _iso_at(week_start + timedelta(days=day_offset)),
-                    "jobs": [{"id": 10}],
-                })
+                apps.append(
+                    {
+                        "id": app_id,
+                        "created_at": _iso_at(week_start + timedelta(days=day_offset)),
+                        "jobs": [{"id": 10}],
+                    }
+                )
                 app_id += 1
         client.applications = apps
 
         result = await hiring_velocity(
-            job_id=10, client=client, now=now, days=56, trend_window=4,
+            job_id=10,
+            client=client,
+            now=now,
+            days=56,
+            trend_window=4,
         )
 
         assert result["trend"] == "improving"
@@ -263,16 +263,22 @@ class DescribeTrendDirection:
             week_start = now - timedelta(days=(8 - week) * 7)
             count = 3 if week < 4 else 1
             for day_offset in range(count):
-                apps.append({
-                    "id": app_id,
-                    "created_at": _iso_at(week_start + timedelta(days=day_offset)),
-                    "jobs": [{"id": 10}],
-                })
+                apps.append(
+                    {
+                        "id": app_id,
+                        "created_at": _iso_at(week_start + timedelta(days=day_offset)),
+                        "jobs": [{"id": 10}],
+                    }
+                )
                 app_id += 1
         client.applications = apps
 
         result = await hiring_velocity(
-            job_id=10, client=client, now=now, days=56, trend_window=4,
+            job_id=10,
+            client=client,
+            now=now,
+            days=56,
+            trend_window=4,
         )
 
         assert result["trend"] == "worsening"
@@ -288,7 +294,11 @@ class DescribeTrendDirection:
         ]
 
         result = await hiring_velocity(
-            job_id=10, client=client, now=now, days=14, trend_window=4,
+            job_id=10,
+            client=client,
+            now=now,
+            days=14,
+            trend_window=4,
         )
 
         assert result["trend"] == "stable"
@@ -303,16 +313,22 @@ class DescribeTrendDirection:
             week_start = now - timedelta(days=(8 - week) * 7)
             count = 2 if week < 4 else 4
             for day_offset in range(count):
-                apps.append({
-                    "id": app_id,
-                    "created_at": _iso_at(week_start + timedelta(days=day_offset)),
-                    "jobs": [{"id": 10}],
-                })
+                apps.append(
+                    {
+                        "id": app_id,
+                        "created_at": _iso_at(week_start + timedelta(days=day_offset)),
+                        "jobs": [{"id": 10}],
+                    }
+                )
                 app_id += 1
         client.applications = apps
 
         result = await hiring_velocity(
-            job_id=10, client=client, now=now, days=56, trend_window=4,
+            job_id=10,
+            client=client,
+            now=now,
+            days=56,
+            trend_window=4,
         )
 
         details = result["trend_details"]
@@ -456,3 +472,127 @@ class DescribeDepartmentAggregation:
         result = await hiring_velocity(department_id=1, client=client, now=now, days=14)
 
         assert result["total_applications"] == 1
+
+
+@pytest.mark.small
+class DescribeEdgeCases:
+    @pytest.mark.anyio
+    async def it_groups_application_with_no_jobs_under_unassigned(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+        client.jobs = [
+            {"id": 10, "departments": [{"id": 1, "name": "Engineering"}]},
+        ]
+        client.applications = [
+            {"id": 1, "created_at": _iso_at(now - timedelta(days=2)), "jobs": []},
+        ]
+
+        result = await hiring_velocity(client=client, now=now, days=14)
+
+        dept_names = {d["department_name"] for d in result["departments"]}
+        assert "Unassigned" in dept_names
+
+    @pytest.mark.anyio
+    async def it_returns_time_range_with_start_end_and_days(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+
+        result = await hiring_velocity(job_id=10, client=client, now=now, days=30)
+
+        assert result["time_range"]["days"] == 30
+        assert result["time_range"]["start"] == "2026-02-13"
+        assert result["time_range"]["end"] == "2026-03-15"
+
+    @pytest.mark.anyio
+    async def it_clears_insufficient_data_flag_with_five_or_more_applications(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+        client.applications = [
+            {"id": i, "created_at": _iso_at(now - timedelta(days=i)), "jobs": [{"id": 10}]} for i in range(1, 6)
+        ]
+
+        result = await hiring_velocity(job_id=10, client=client, now=now, days=14)
+
+        assert result["insufficient_data"] is False
+        assert result["warning"] is None
+
+    @pytest.mark.anyio
+    async def it_includes_warning_message_with_application_count(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+        client.applications = [
+            {"id": 1, "created_at": _iso_at(now - timedelta(days=1)), "jobs": [{"id": 10}]},
+        ]
+
+        result = await hiring_velocity(job_id=10, client=client, now=now, days=7)
+
+        assert "1 applications" in result["warning"]
+
+    @pytest.mark.anyio
+    async def it_handles_zero_previous_avg_in_change_pct(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+        # 8 weeks: first 4 have 0 apps, last 4 have some
+        apps = []
+        app_id = 1
+        for week in range(4, 8):
+            week_start = now - timedelta(days=(8 - week) * 7)
+            apps.append(
+                {
+                    "id": app_id,
+                    "created_at": _iso_at(week_start + timedelta(days=1)),
+                    "jobs": [{"id": 10}],
+                }
+            )
+            app_id += 1
+        client.applications = apps
+
+        result = await hiring_velocity(
+            job_id=10,
+            client=client,
+            now=now,
+            days=56,
+            trend_window=4,
+        )
+
+        assert result["trend_details"]["change_pct"] == 0.0
+
+    @pytest.mark.anyio
+    async def it_assigns_application_with_unknown_job_to_unassigned(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+        client.jobs = [
+            {"id": 10, "departments": [{"id": 1, "name": "Engineering"}]},
+        ]
+        # Application references job_id 999 which is not in the jobs list
+        client.applications = [
+            {"id": 1, "created_at": _iso_at(now - timedelta(days=2)), "jobs": [{"id": 999}]},
+        ]
+
+        result = await hiring_velocity(client=client, now=now, days=14)
+
+        dept_names = {d["department_name"] for d in result["departments"]}
+        assert "Unassigned" in dept_names
+
+
+@pytest.mark.small
+class DescribeBuildBucketsEdgeCases:
+    @pytest.mark.anyio
+    async def it_returns_empty_buckets_when_days_is_zero(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+
+        result = await hiring_velocity(job_id=10, client=client, now=now, days=0)
+
+        assert result["weekly_buckets"] == []
+        assert result["total_applications"] == 0
+
+    def it_skips_application_created_before_all_bucket_starts(self) -> None:
+        start = datetime(2026, 3, 1, tzinfo=UTC)
+        end = datetime(2026, 3, 15, tzinfo=UTC)
+        # Application created before the start of the range
+        apps = [{"created_at": _iso_at(datetime(2026, 2, 20, tzinfo=UTC))}]
+
+        buckets = _build_buckets(apps, start=start, end=end, bucket_size_days=7)
+
+        assert all(b["count"] == 0 for b in buckets)

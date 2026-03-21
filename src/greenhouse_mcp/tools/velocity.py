@@ -19,7 +19,7 @@ _DEFAULT_TREND_WINDOW = 4
 _INSUFFICIENT_DATA_THRESHOLD = 5
 
 
-async def hiring_velocity(
+async def hiring_velocity(  # noqa: PLR0913
     *,
     job_id: int | None = None,
     department_id: int | None = None,
@@ -72,7 +72,7 @@ async def hiring_velocity(
     )
 
 
-def _make_metrics(
+def _make_metrics(  # noqa: PLR0913
     applications: list[dict[str, Any]],
     offer_metrics: dict[str, Any],
     *,
@@ -148,10 +148,7 @@ async def _single_scope_metrics(  # noqa: PLR0913
     if department_id is not None and job_id is None:
         dept_jobs = await client.get_jobs(department_id=department_id)
         dept_job_ids = {j["id"] for j in dept_jobs}
-        applications = [
-            a for a in applications
-            if any(j["id"] in dept_job_ids for j in a.get("jobs", []))
-        ]
+        applications = [a for a in applications if any(j["id"] in dept_job_ids for j in a.get("jobs", []))]
 
     offer_metrics = await _compute_offer_metrics(client)
     return _make_metrics(
@@ -202,10 +199,7 @@ async def _department_aggregated_metrics(  # noqa: PLR0913
     dept_apps: dict[tuple[int | None, str], list[dict[str, Any]]] = {}
     for app in all_applications:
         app_jobs = app.get("jobs", [])
-        if app_jobs:
-            dept_key = job_to_dept.get(app_jobs[0]["id"], (None, "Unassigned"))
-        else:
-            dept_key = (None, "Unassigned")
+        dept_key = job_to_dept.get(app_jobs[0]["id"], (None, "Unassigned")) if app_jobs else (None, "Unassigned")
         dept_apps.setdefault(dept_key, []).append(app)
 
     departments = []
@@ -219,11 +213,13 @@ async def _department_aggregated_metrics(  # noqa: PLR0913
             bucket_size_days=bucket_size_days,
             trend_window=trend_window,
         )
-        departments.append({
-            "department_id": dept_id,
-            "department_name": dept_name,
-            **metrics,
-        })
+        departments.append(
+            {
+                "department_id": dept_id,
+                "department_name": dept_name,
+                **metrics,
+            }
+        )
 
     overall = _make_metrics(
         all_applications,
@@ -258,10 +254,7 @@ async def _compute_offer_metrics(client: GreenhousePort) -> dict[str, Any]:
     rejected = sum(1 for o in all_offers if o.get("status") == "rejected")
     decided = accepted + rejected
 
-    if decided == 0:
-        rate = 0.0
-    else:
-        rate = (accepted / decided) * 100
+    rate = 0.0 if decided == 0 else (accepted / decided) * 100
 
     return {
         "total_offers": decided,
@@ -304,12 +297,30 @@ def _build_buckets(
         created = datetime.fromisoformat(app["created_at"])
         if created.tzinfo is None:
             created = created.replace(tzinfo=UTC)
-        for i in range(len(bucket_starts) - 1, -1, -1):
-            if created >= bucket_starts[i]:
-                counts[bucket_starts[i].date().isoformat()] += 1
-                break
+        bucket_key = _find_bucket(created, bucket_starts)
+        if bucket_key is not None:
+            counts[bucket_key] += 1
 
     return [{"week_start": k, "count": v} for k, v in counts.items()]
+
+
+def _find_bucket(created: datetime, bucket_starts: list[datetime]) -> str | None:
+    """Find the bucket key for a given timestamp.
+
+    Searches bucket_starts in reverse order, returning the ISO date string
+    of the first bucket whose start is at or before the timestamp.
+
+    Args:
+        created: The application creation timestamp.
+        bucket_starts: Sorted list of bucket start datetimes.
+
+    Returns:
+        ISO date string of the matching bucket, or None if before all buckets.
+    """
+    for i in range(len(bucket_starts) - 1, -1, -1):
+        if created >= bucket_starts[i]:
+            return bucket_starts[i].date().isoformat()
+    return None
 
 
 def _compute_trend(
@@ -337,10 +348,7 @@ def _compute_trend(
     recent_avg = sum(recent) / len(recent)
     previous_avg = sum(previous) / len(previous)
 
-    if previous_avg == 0:
-        change_pct = 0.0
-    else:
-        change_pct = ((recent_avg - previous_avg) / previous_avg) * 100
+    change_pct = 0.0 if previous_avg == 0 else ((recent_avg - previous_avg) / previous_avg) * 100
 
     if recent_avg > previous_avg:
         trend = "improving"
