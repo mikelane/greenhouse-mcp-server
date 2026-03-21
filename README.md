@@ -1,5 +1,11 @@
 # greenhouse-mcp-server
 
+![Python 3.14](https://img.shields.io/badge/python-3.14-blue)
+![Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)
+![Mutation 100%](https://img.shields.io/badge/mutation%20testing-100%25-brightgreen)
+![mypy strict](https://img.shields.io/badge/mypy-strict-blue)
+![License MIT](https://img.shields.io/github/license/mikelane/greenhouse-mcp-server)
+
 An MCP server that gives AI agents workflow-oriented access to the [Greenhouse](https://www.greenhouse.io/) recruiting platform. Instead of mirroring the REST API endpoint-by-endpoint, each tool answers a question a recruiter or hiring manager actually asks.
 
 [![Demo: Complete Walkthrough](https://img.youtube.com/vi/BfHNOBYvfR8/hqdefault.jpg)](https://youtu.be/BfHNOBYvfR8)
