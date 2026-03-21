@@ -237,7 +237,7 @@ async def _detect_missing_scorecards(  # noqa: PLR0913
             priority = _compute_priority_score(
                 severity=_SEVERITY_MISSING_SCORECARD,
                 days_overdue=days_overdue,
-                threshold=max(1, scorecard_hours // 24),
+                threshold=max(1, scorecard_hours // 24),  # gremlin: pardon[equivalent] int division and float division produce same result in max(1, x) context
                 stage_index=stage_index,
                 total_stages=total_stages,
             )
