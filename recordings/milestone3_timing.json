@@ -1,0 +1,50 @@
+[
+  {
+    "name": "intro",
+    "text": "Milestone 3 adds the final two tools to greenhouse mcp server. Analytics and search. The hiring velocity tool answers are we getting faster or slower at hiring. The search talent tool finds candidates matching any criteria.",
+    "duration": 14.16,
+    "clip": "milestone3_intro.mp3"
+  },
+  {
+    "name": "velocity_question",
+    "text": "First: hiring velocity. Are we getting faster at hiring? The tool fetches 90 days of applications, groups them into weekly buckets, calculates a trend using a simple moving average, and reports offer acceptance rates.",
+    "duration": 14.07,
+    "clip": "milestone3_velocity_question.mp3"
+  },
+  {
+    "name": "velocity_result",
+    "text": "Thirteen weekly buckets. Trend is improving. Nine applications in the time range for Senior Software Engineer. Offer acceptance rate: 100 percent with one accepted and zero rejected. When the sample is small, the tool warns you.",
+    "duration": 14.86,
+    "clip": "milestone3_velocity_result.mp3"
+  },
+  {
+    "name": "velocity_department",
+    "text": "When no job is specified, velocity breaks down by department. Engineering has 12 applications. Product has 4. Both are trending upward. The overall summary aggregates everything.",
+    "duration": 12.21,
+    "clip": "milestone3_velocity_department.mp3"
+  },
+  {
+    "name": "search_question",
+    "text": "Next: search talent. Find me candidates matching a name, stage, source, or tag. The tool searches candidates, enriches them with application data, and ranks by relevance.",
+    "duration": 11.61,
+    "clip": "milestone3_search_question.mp3"
+  },
+  {
+    "name": "search_name",
+    "text": "Search for Maria. One result. Exact match on first name scores 50 points plus a recency bonus. Maria Chen has two applications: Senior Software Engineer where she was hired, and Product Manager at hiring manager screen. Tags include strong referral and senior.",
+    "duration": 15.98,
+    "clip": "milestone3_search_name.mp3"
+  },
+  {
+    "name": "search_tags",
+    "text": "Filter by tag: senior. Four candidates with that tag. Maria Chen, Aisha Patel, Elena Volkov, and Alex Tanaka. The tool handles all tag matching client side since the Greenhouse API does not support server side tag filtering.",
+    "duration": 13.1,
+    "clip": "milestone3_search_tags.mp3"
+  },
+  {
+    "name": "closing",
+    "text": "Five tools. Five questions answered. Pipeline health, candidate dossier, needs attention, hiring velocity, and search talent. Every tool composes multiple API calls so the agent does not have to.",
+    "duration": 10.59,
+    "clip": "milestone3_closing.mp3"
+  }
+]
