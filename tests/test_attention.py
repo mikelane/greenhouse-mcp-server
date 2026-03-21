@@ -230,7 +230,7 @@ class DescribeStaleApplications:
         stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
         assert len(stuck) == 1
         assert stuck[0]["candidate_name"] == "Jane Doe"
-        assert stuck[0]["days_overdue"] == 3  # noqa: PLR2004
+        assert stuck[0]["days_overdue"] == 3
 
     @pytest.mark.anyio
     async def it_excludes_applications_within_threshold(self) -> None:
@@ -423,7 +423,7 @@ class DescribePendingOffers:
         result = await needs_attention(client=client, offer_sent_days=3, now=now)
         pending = [i for i in result["items"] if i["type"] == "pending_offer"]
         assert len(pending) == 1
-        assert pending[0]["days_overdue"] == 2  # noqa: PLR2004
+        assert pending[0]["days_overdue"] == 2
 
 
 @pytest.mark.small
@@ -470,7 +470,7 @@ class DescribePriorityScoring:
             ],
         }
         result = await needs_attention(client=client, days_stale=7, now=now)
-        assert result["total_items"] >= 2  # noqa: PLR2004
+        assert result["total_items"] >= 2
         assert result["items"][0]["type"] == "missing_scorecard"
 
     @pytest.mark.anyio
@@ -494,7 +494,7 @@ class DescribePriorityScoring:
         }
         result = await needs_attention(client=client, days_stale=7, now=now)
         for item in result["items"]:
-            assert 0 <= item["priority_score"] <= 100  # noqa: PLR2004
+            assert 0 <= item["priority_score"] <= 100
 
 
 @pytest.mark.small
@@ -621,7 +621,7 @@ class DescribeEdgeCases:
         result = await needs_attention(client=client, days_stale=7, now=now)
         for item in result["items"]:
             assert "application_id" in item
-            assert item["application_id"] == 42  # noqa: PLR2004
+            assert item["application_id"] == 42
 
     @pytest.mark.anyio
     async def it_includes_candidate_id_in_each_item(self) -> None:
@@ -643,7 +643,7 @@ class DescribeEdgeCases:
         }
         result = await needs_attention(client=client, days_stale=7, now=now)
         for item in result["items"]:
-            assert item["candidate_id"] == 99  # noqa: PLR2004
+            assert item["candidate_id"] == 99
 
     @pytest.mark.anyio
     async def it_includes_job_name_in_each_item(self) -> None:
@@ -815,7 +815,7 @@ class DescribeEdgeCases:
         }
         result = await needs_attention(client=client, days_stale=7, now=now)
         stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
-        assert len(stuck) == 2  # noqa: PLR2004
+        assert len(stuck) == 2
         assert all(s["candidate_name"] == "Jane Doe" for s in stuck)
 
     @pytest.mark.anyio
@@ -848,7 +848,7 @@ class DescribeEdgeCases:
         }
         result = await needs_attention(client=client, days_stale=7, now=now)
         stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
-        assert len(stuck) == 2  # noqa: PLR2004
+        assert len(stuck) == 2
 
     @pytest.mark.anyio
     async def it_uses_stage_position_zero_when_stage_not_found(self) -> None:
@@ -873,7 +873,7 @@ class DescribeEdgeCases:
         result = await needs_attention(client=client, days_stale=7, now=now)
         stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
         assert len(stuck) == 1
-        assert 0 <= stuck[0]["priority_score"] <= 100  # noqa: PLR2004
+        assert 0 <= stuck[0]["priority_score"] <= 100
 
     @pytest.mark.anyio
     async def it_reuses_candidate_cache_in_missing_scorecards(self) -> None:
@@ -920,7 +920,7 @@ class DescribeEdgeCases:
         }
         result = await needs_attention(client=client, now=now)
         missing = [i for i in result["items"] if i["type"] == "missing_scorecard"]
-        assert len(missing) == 2  # noqa: PLR2004
+        assert len(missing) == 2
         assert all(m["candidate_name"] == "Jane Doe" for m in missing)
 
     @pytest.mark.anyio
@@ -1017,7 +1017,7 @@ class DescribeEdgeCases:
             now=now,
         )
         no_act = [i for i in result["items"] if i["type"] == "no_activity"]
-        assert len(no_act) == 2  # noqa: PLR2004
+        assert len(no_act) == 2
         assert all(n["candidate_name"] == "Jane Doe" for n in no_act)
 
     @pytest.mark.anyio
@@ -1221,7 +1221,7 @@ class DescribeGetStagePosition:
         ]
         idx, total = _get_stage_position(1, stages)
         # Both stages included (default True), total=2
-        assert total == 2  # noqa: PLR2004
+        assert total == 2
         assert idx == 0
 
     def it_excludes_explicitly_inactive_stages(self) -> None:
@@ -1232,7 +1232,7 @@ class DescribeGetStagePosition:
             {"id": 3, "priority": 2, "active": True},
         ]
         idx, total = _get_stage_position(3, stages)
-        assert total == 2  # noqa: PLR2004
+        assert total == 2
         # Stage 3 is second among active stages (id=1 at priority 0, id=3 at priority 2)
         assert idx == 1
 
@@ -1248,7 +1248,7 @@ class DescribeGetStagePosition:
         ]
         idx, total = _get_stage_position(20, stages)
         assert idx == 1
-        assert total == 3  # noqa: PLR2004
+        assert total == 3
 
     def it_returns_zero_index_for_first_stage(self) -> None:
         """Line 89: ensure exact match returns correct index, not just any."""
@@ -1258,7 +1258,7 @@ class DescribeGetStagePosition:
         ]
         idx, total = _get_stage_position(5, stages)
         assert idx == 0
-        assert total == 2  # noqa: PLR2004
+        assert total == 2
 
 
 @pytest.mark.small
@@ -1403,7 +1403,7 @@ class DescribeMissingScorecardDaysOverdue:
         result = await needs_attention(client=client, scorecard_hours=48, now=now)
         missing = [i for i in result["items"] if i["type"] == "missing_scorecard"]
         assert len(missing) == 1
-        assert missing[0]["days_overdue"] == 3  # noqa: PLR2004
+        assert missing[0]["days_overdue"] == 3
 
     @pytest.mark.anyio
     async def it_uses_integer_division_for_scorecard_hours_to_days(self) -> None:
@@ -1442,7 +1442,7 @@ class DescribeMissingScorecardDaysOverdue:
         missing = [i for i in result["items"] if i["type"] == "missing_scorecard"]
         assert len(missing) == 1
         # days_overdue = max(1, 4 - (50//24)) = max(1, 4-2) = 2
-        assert missing[0]["days_overdue"] == 2  # noqa: PLR2004
+        assert missing[0]["days_overdue"] == 2
 
     @pytest.mark.anyio
     async def it_uses_subtraction_not_addition_for_days_overdue(self) -> None:
@@ -1596,7 +1596,7 @@ class DescribeNoActivityThresholdBoundary:
         result = await needs_attention(client=client, days_stale=100, no_activity_days=14, now=now)
         no_act = [i for i in result["items"] if i["type"] == "no_activity"]
         assert len(no_act) == 1
-        assert no_act[0]["days_overdue"] == 6  # noqa: PLR2004
+        assert no_act[0]["days_overdue"] == 6
 
 
 @pytest.mark.small
@@ -1634,5 +1634,5 @@ class DescribeCacheHitBranches:
         result = await needs_attention(client=client, days_stale=100, now=now)
 
         pending = [i for i in result["items"] if i["type"] == "pending_offer"]
-        assert len(pending) == 2  # noqa: PLR2004
+        assert len(pending) == 2
         assert all(i["candidate_name"] == "Jane Doe" for i in pending)

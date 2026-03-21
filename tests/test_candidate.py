@@ -262,7 +262,7 @@ class DescribeCandidateDossier:
 
         result = await candidate_dossier(candidate_id=42, client=client)
 
-        assert len(result["applications"]) == 2  # noqa: PLR2004
+        assert len(result["applications"]) == 2
 
 
 @pytest.mark.small
@@ -283,7 +283,7 @@ class DescribeSummary:
         result = await candidate_dossier(candidate_id=42, client=client)
         summary = result["summary"]
 
-        assert summary["candidate_id"] == 42  # noqa: PLR2004
+        assert summary["candidate_id"] == 42
         assert summary["name"] == "Jane Doe"
         assert summary["email"] == "jane@example.com"
         assert summary["phone"] == "+1-555-0100"
@@ -307,8 +307,8 @@ class DescribeSummary:
         result = await candidate_dossier(candidate_id=42, client=client)
         summary = result["summary"]
 
-        assert summary["application_count"] == 3  # noqa: PLR2004
-        assert summary["active_application_count"] == 2  # noqa: PLR2004
+        assert summary["application_count"] == 3
+        assert summary["active_application_count"] == 2
 
     async def it_detects_pending_offers(self) -> None:
         candidate = _make_candidate(applications=[{"id": 100, "status": "active"}])
@@ -495,7 +495,7 @@ class DescribeApplicationDetail:
         result = await candidate_dossier(candidate_id=42, client=client)
 
         assert len(result["applications"][0]["scorecards"]) == 1
-        assert len(result["applications"][1]["scorecards"]) == 2  # noqa: PLR2004
+        assert len(result["applications"][1]["scorecards"]) == 2
 
     async def it_extracts_scorecard_summary_fields(self) -> None:
         candidate = _make_candidate(applications=[{"id": 100, "status": "active"}])
@@ -509,7 +509,7 @@ class DescribeApplicationDetail:
         result = await candidate_dossier(candidate_id=42, client=client)
         sc = result["applications"][0]["scorecards"][0]
 
-        assert sc["id"] == 111  # noqa: PLR2004
+        assert sc["id"] == 111
         assert sc["interview"] == "Technical Screen"
         assert sc["interviewer"] == "Pat Lee"
         assert sc["overall_recommendation"] == "strong_yes"
@@ -555,7 +555,7 @@ class DescribeApplicationDetail:
         result = await candidate_dossier(candidate_id=42, client=client)
         iv = result["applications"][0]["scheduled_interviews"][0]
 
-        assert iv["id"] == 222  # noqa: PLR2004
+        assert iv["id"] == 222
         assert iv["interview_name"] == "System Design"
         assert iv["start"] == "2026-03-25T13:00:00Z"
         assert iv["status"] == "scheduled"
@@ -573,7 +573,7 @@ class DescribeApplicationDetail:
         result = await candidate_dossier(candidate_id=42, client=client)
         offer = result["applications"][0]["offers"][0]
 
-        assert offer["id"] == 333  # noqa: PLR2004
+        assert offer["id"] == 333
         assert offer["status"] == "unresolved"
         assert offer["starts_at"] == "2026-04-01"
         assert offer["sent_at"] == "2026-03-15"
@@ -640,8 +640,8 @@ class DescribeActivityFeed:
         result = await candidate_dossier(candidate_id=42, client=client)
         feed = result["activity_feed"]
 
-        assert len(feed["recent_notes"]) == 10  # noqa: PLR2004
-        assert feed["total_notes"] == 15  # noqa: PLR2004
+        assert len(feed["recent_notes"]) == 10
+        assert feed["total_notes"] == 15
 
     async def it_truncates_emails_to_ten_most_recent(self) -> None:
         candidate = _make_candidate()
@@ -653,8 +653,8 @@ class DescribeActivityFeed:
         result = await candidate_dossier(candidate_id=42, client=client)
         feed = result["activity_feed"]
 
-        assert len(feed["recent_emails"]) == 10  # noqa: PLR2004
-        assert feed["total_emails"] == 12  # noqa: PLR2004
+        assert len(feed["recent_emails"]) == 10
+        assert feed["total_emails"] == 12
 
     async def it_includes_all_items_when_under_truncation_limit(self) -> None:
         candidate = _make_candidate()
@@ -666,10 +666,10 @@ class DescribeActivityFeed:
         result = await candidate_dossier(candidate_id=42, client=client)
         feed = result["activity_feed"]
 
-        assert len(feed["recent_notes"]) == 3  # noqa: PLR2004
-        assert feed["total_notes"] == 3  # noqa: PLR2004
-        assert len(feed["recent_emails"]) == 2  # noqa: PLR2004
-        assert feed["total_emails"] == 2  # noqa: PLR2004
+        assert len(feed["recent_notes"]) == 3
+        assert feed["total_notes"] == 3
+        assert len(feed["recent_emails"]) == 2
+        assert feed["total_emails"] == 2
 
     async def it_counts_total_activities(self) -> None:
         candidate = _make_candidate()
@@ -681,7 +681,7 @@ class DescribeActivityFeed:
         result = await candidate_dossier(candidate_id=42, client=client)
         feed = result["activity_feed"]
 
-        assert feed["total_activities"] == 5  # noqa: PLR2004
+        assert feed["total_activities"] == 5
 
     async def it_returns_empty_feed_for_candidate_with_no_activity(self) -> None:
         candidate = _make_candidate()
@@ -751,4 +751,4 @@ class DescribeEdgeCases:
 
         result = await candidate_dossier(candidate_id=42, client=client)
 
-        assert len(result["applications"]) == 3  # noqa: PLR2004
+        assert len(result["applications"]) == 3

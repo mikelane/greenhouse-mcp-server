@@ -26,14 +26,14 @@ class DescribeFakeGreenhouseClient:
     async def it_returns_all_jobs_when_no_filter(self) -> None:
         client = FakeGreenhouseClient()
         jobs = await client.get_jobs()
-        assert len(jobs) == 3  # noqa: PLR2004
+        assert len(jobs) == 3
         assert all("id" in j and "name" in j for j in jobs)
 
     @pytest.mark.anyio
     async def it_returns_jobs_matching_status_filter(self) -> None:
         client = FakeGreenhouseClient()
         open_jobs = await client.get_jobs(status="open")
-        assert len(open_jobs) == 3  # noqa: PLR2004
+        assert len(open_jobs) == 3
         assert all(j["status"] == "open" for j in open_jobs)
 
         closed_jobs = await client.get_jobs(status="closed")
@@ -53,7 +53,7 @@ class DescribeFakeGreenhouseClient:
     async def it_returns_a_single_job_by_id(self) -> None:
         client = FakeGreenhouseClient()
         job = await client.get_job(1001)
-        assert job["id"] == 1001  # noqa: PLR2004
+        assert job["id"] == 1001
         assert job["name"] == "Senior Software Engineer"
 
     @pytest.mark.anyio
@@ -66,7 +66,7 @@ class DescribeFakeGreenhouseClient:
     async def it_returns_stages_for_a_job(self) -> None:
         client = FakeGreenhouseClient()
         stages = await client.get_job_stages(1001)
-        assert len(stages) == 4  # noqa: PLR2004
+        assert len(stages) == 4
         assert stages[0]["name"] == "Application Review"
 
     @pytest.mark.anyio
@@ -86,7 +86,7 @@ class DescribeFakeGreenhouseClient:
         client = FakeGreenhouseClient()
         apps = await client.get_applications(job_id=1001)
         assert len(apps) > 0
-        assert all(any(j["id"] == 1001 for j in a.get("jobs", [])) for a in apps)  # noqa: PLR2004
+        assert all(any(j["id"] == 1001 for j in a.get("jobs", [])) for a in apps)
 
     @pytest.mark.anyio
     async def it_returns_applications_matching_status_filter(self) -> None:
@@ -110,13 +110,13 @@ class DescribeFakeGreenhouseClient:
         client = FakeGreenhouseClient()
         apps = await client.get_applications(job_id=1001, status="active")
         assert all(a["status"] == "active" for a in apps)
-        assert all(any(j["id"] == 1001 for j in a.get("jobs", [])) for a in apps)  # noqa: PLR2004
+        assert all(any(j["id"] == 1001 for j in a.get("jobs", [])) for a in apps)
 
     @pytest.mark.anyio
     async def it_returns_candidate_by_id(self) -> None:
         client = FakeGreenhouseClient()
         candidate = await client.get_candidate(101)
-        assert candidate["id"] == 101  # noqa: PLR2004
+        assert candidate["id"] == 101
         assert "first_name" in candidate
         assert "last_name" in candidate
         assert "email_addresses" in candidate
@@ -132,7 +132,7 @@ class DescribeFakeGreenhouseClient:
     async def it_returns_candidates_when_no_filter(self) -> None:
         client = FakeGreenhouseClient()
         candidates = await client.get_candidates()
-        assert len(candidates) == 15  # noqa: PLR2004
+        assert len(candidates) == 15
 
     @pytest.mark.anyio
     async def it_returns_candidates_matching_job_id_filter(self) -> None:
@@ -193,7 +193,7 @@ class DescribeFakeGreenhouseClient:
     async def it_returns_all_scheduled_interviews_when_no_filter(self) -> None:
         client = FakeGreenhouseClient()
         interviews = await client.get_scheduled_interviews()
-        assert len(interviews) >= 4  # noqa: PLR2004
+        assert len(interviews) >= 4
 
     @pytest.mark.anyio
     async def it_returns_offers_for_application(self) -> None:
@@ -219,7 +219,7 @@ class DescribeFakeGreenhouseClient:
     async def it_returns_all_offers_when_no_filter(self) -> None:
         client = FakeGreenhouseClient()
         offers = await client.get_offers()
-        assert len(offers) >= 3  # noqa: PLR2004
+        assert len(offers) >= 3
 
     @pytest.mark.anyio
     async def it_returns_activity_feed_for_candidate(self) -> None:
@@ -250,7 +250,7 @@ class DescribeFakeGreenhouseClientDataStory:
         stages = await client.get_job_stages(1001)
         tech_interview_stage = next(s for s in stages if s["name"] == "Technical Interview")
         stuck_in_tech = [a for a in apps if a.get("current_stage", {}).get("id") == tech_interview_stage["id"]]
-        assert len(stuck_in_tech) >= 5  # noqa: PLR2004
+        assert len(stuck_in_tech) >= 5
 
     @pytest.mark.anyio
     async def it_has_unsubmitted_scorecards(self) -> None:
@@ -262,13 +262,13 @@ class DescribeFakeGreenhouseClientDataStory:
             for sc in scorecards:
                 if sc.get("submitted_at") is None:
                     unsubmitted_count += 1
-        assert unsubmitted_count >= 2  # noqa: PLR2004
+        assert unsubmitted_count >= 2
 
     @pytest.mark.anyio
     async def it_has_unresolved_offers(self) -> None:
         client = FakeGreenhouseClient()
         unresolved = await client.get_offers(status="unresolved")
-        assert len(unresolved) >= 2  # noqa: PLR2004
+        assert len(unresolved) >= 2
 
     @pytest.mark.anyio
     async def it_has_accepted_offer(self) -> None:
@@ -281,11 +281,11 @@ class DescribeFakeGreenhouseClientDataStory:
     async def it_has_candidate_with_multiple_applications(self) -> None:
         client = FakeGreenhouseClient()
         candidate = await client.get_candidate(101)
-        assert len(candidate["applications"]) >= 2  # noqa: PLR2004
+        assert len(candidate["applications"]) >= 2
 
     @pytest.mark.anyio
     async def it_has_interviews_awaiting_feedback(self) -> None:
         client = FakeGreenhouseClient()
         interviews = await client.get_scheduled_interviews()
         awaiting = [i for i in interviews if i["status"] == "awaiting_feedback"]
-        assert len(awaiting) >= 2  # noqa: PLR2004
+        assert len(awaiting) >= 2
