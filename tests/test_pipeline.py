@@ -35,7 +35,7 @@ class FakeGreenhouseClient:
         self,
         *,
         status: str | None = None,
-        _department_id: int | None = None,
+        department_id: int | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         result = self._jobs
         if status:
@@ -59,7 +59,7 @@ class FakeGreenhouseClient:
         *,
         job_id: int | None = None,
         status: str | None = None,
-        _created_after: str | None = None,
+        created_after: str | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         result = self._applications
         if job_id:
@@ -68,36 +68,36 @@ class FakeGreenhouseClient:
             result = [a for a in result if a.get("status") == status]
         return result
 
-    async def get_candidate(self, _candidate_id: int) -> dict[str, Any]:
-        return {"id": _candidate_id}
+    async def get_candidate(self, candidate_id: int) -> dict[str, Any]:
+        return {"id": candidate_id}
 
     async def get_candidates(
         self,
         *,
-        _job_id: int | None = None,
-        _email: str | None = None,
+        job_id: int | None = None,  # noqa: ARG002
+        email: str | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return []
 
-    async def get_scorecards(self, _application_id: int) -> list[dict[str, Any]]:
+    async def get_scorecards(self, application_id: int) -> list[dict[str, Any]]:  # noqa: ARG002
         return []
 
     async def get_scheduled_interviews(
         self,
         *,
-        _application_id: int | None = None,
+        application_id: int | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return []
 
     async def get_offers(
         self,
         *,
-        _application_id: int | None = None,
-        _status: str | None = None,
+        application_id: int | None = None,  # noqa: ARG002
+        status: str | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return []
 
-    async def get_activity_feed(self, _candidate_id: int) -> dict[str, Any]:
+    async def get_activity_feed(self, candidate_id: int) -> dict[str, Any]:  # noqa: ARG002
         return {"notes": [], "emails": [], "activities": []}
 
 
