@@ -388,12 +388,16 @@ class GreenhouseClient:
         *,
         job_id: int | None = None,
         email: str | None = None,
+        created_after: str | None = None,
+        updated_after: str | None = None,
     ) -> list[dict[str, Any]]:
         """Fetch candidates, optionally filtered.
 
         Args:
             job_id: Filter by job ID.
             email: Filter by email address.
+            created_after: ISO 8601 timestamp lower bound for creation date.
+            updated_after: ISO 8601 timestamp lower bound for update date.
 
         Returns:
             List of candidate objects.
@@ -403,6 +407,10 @@ class GreenhouseClient:
             params["job_id"] = job_id
         if email is not None:
             params["email"] = email
+        if created_after is not None:
+            params["created_after"] = created_after
+        if updated_after is not None:
+            params["updated_after"] = updated_after
         return await self._get_list("/candidates", params=params)
 
     async def get_scorecards(self, application_id: int) -> list[dict[str, Any]]:

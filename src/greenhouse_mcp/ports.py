@@ -97,12 +97,16 @@ class GreenhousePort(Protocol):
         *,
         job_id: int | None = None,
         email: str | None = None,
+        created_after: str | None = None,
+        updated_after: str | None = None,
     ) -> list[dict[str, Any]]:
         """Fetch candidates, optionally filtered.
 
         Args:
             job_id: Filter by job ID.
             email: Filter by email address.
+            created_after: ISO 8601 timestamp lower bound for creation date.
+            updated_after: ISO 8601 timestamp lower bound for update date.
 
         Returns:
             List of candidate objects.
