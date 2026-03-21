@@ -305,7 +305,8 @@ async def candidate_dossier(
     all_offers: list[list[dict[str, Any]]] = []
     applications: list[dict[str, Any]] = []
 
-    for app_stub, details in zip(application_stubs, app_details, strict=True):  # gremlin: pardon[untestable] asyncio.gather always returns exactly one result per input
+    # gremlin: pardon[untestable] gather returns one result per input
+    for app_stub, details in zip(application_stubs, app_details, strict=True):
         scorecards, interviews, offers = details
         all_offers.append(offers)  # type: ignore[arg-type]
         applications.append(
