@@ -171,10 +171,10 @@ class DescribePipelineHealth:
 
         result = await pipeline_health(job_id=100, client=client)
 
-        assert result["job_id"] == 100  # noqa: PLR2004
+        assert result["job_id"] == 100
         assert result["job_name"] == "Software Engineer"
-        assert result["total_active"] == 10  # noqa: PLR2004
-        assert len(result["stages"]) == 4  # noqa: PLR2004
+        assert result["total_active"] == 10
+        assert len(result["stages"]) == 4
         stage_names = [s["stage_name"] for s in result["stages"]]
         assert stage_names == [
             "Application Review",
@@ -182,10 +182,10 @@ class DescribePipelineHealth:
             "Technical Interview",
             "Onsite",
         ]
-        assert result["stages"][0]["count"] == 3  # noqa: PLR2004
-        assert result["stages"][1]["count"] == 2  # noqa: PLR2004
-        assert result["stages"][2]["count"] == 3  # noqa: PLR2004
-        assert result["stages"][3]["count"] == 2  # noqa: PLR2004
+        assert result["stages"][0]["count"] == 3
+        assert result["stages"][1]["count"] == 2
+        assert result["stages"][2]["count"] == 3
+        assert result["stages"][3]["count"] == 2
 
     @pytest.mark.anyio
     async def it_computes_share_for_each_stage(self) -> None:
@@ -243,7 +243,7 @@ class DescribePipelineHealth:
 
         result = await pipeline_health(job_id=100, staleness_days=7, client=client)
 
-        assert result["stages"][0]["cold_count"] == 2  # noqa: PLR2004
+        assert result["stages"][0]["cold_count"] == 2
 
     @pytest.mark.anyio
     async def it_sorts_stages_by_priority(self) -> None:
@@ -544,7 +544,7 @@ class DescribeBottleneckDetection:
         )
 
         stage_a = result["stages"][0]
-        assert stage_a["share"] < 0.30  # noqa: PLR2004
+        assert stage_a["share"] < 0.30
         assert stage_a["severity"] is None
         assert stage_a["is_bottleneck"] is False
 
@@ -586,7 +586,7 @@ class DescribeBottleneckDetection:
 
         stale_stage = result["stages"][0]
         assert stale_stage["cold_count"] == 1
-        assert stale_stage["count"] == 2  # noqa: PLR2004
+        assert stale_stage["count"] == 2
         # stale_fraction = 1/2 = 0.50, share = 2/10 = 0.20 (below threshold)
         # So severity should be LOW (stale but not concentrated)
         assert stale_stage["severity"] == "LOW"
@@ -686,8 +686,8 @@ class DescribeBottleneckDetection:
         )
 
         test_stage = result["stages"][0]
-        assert test_stage["cold_count"] == 3  # noqa: PLR2004
-        assert test_stage["count"] == 10  # noqa: PLR2004
+        assert test_stage["cold_count"] == 3
+        assert test_stage["count"] == 10
         # stale_fraction = 3/10 = 0.30 < 0.50 threshold => NOT stale
         # share = 10/11 ≈ 0.91 > 0.30 => concentrated
         # Concentrated but not stale => MEDIUM (not HIGH)
@@ -740,10 +740,10 @@ class DescribeMultiJobAggregation:
         result = await pipeline_health(client=client)
 
         assert "jobs" in result
-        assert len(result["jobs"]) == 2  # noqa: PLR2004
+        assert len(result["jobs"]) == 2
         job_ids = [j["job_id"] for j in result["jobs"]]
-        assert 100 in job_ids  # noqa: PLR2004
-        assert 200 in job_ids  # noqa: PLR2004
+        assert 100 in job_ids
+        assert 200 in job_ids
 
     @pytest.mark.anyio
     async def it_includes_jobs_needing_attention(self) -> None:
@@ -777,8 +777,8 @@ class DescribeMultiJobAggregation:
             client=client,
         )
 
-        assert 100 in result["jobs_needing_attention"]  # noqa: PLR2004
-        assert 200 not in result["jobs_needing_attention"]  # noqa: PLR2004
+        assert 100 in result["jobs_needing_attention"]
+        assert 200 not in result["jobs_needing_attention"]
 
 
 @pytest.mark.small
@@ -851,7 +851,7 @@ class DescribeEdgeCases:
 
         result = await pipeline_health(job_id=100, client=client)
 
-        assert result["total_active"] == 2  # noqa: PLR2004
+        assert result["total_active"] == 2
         unknown_stages = [s for s in result["stages"] if s["stage_name"] == "Unknown/Deleted Stage"]
         assert len(unknown_stages) == 1
         assert unknown_stages[0]["count"] == 1
@@ -1048,8 +1048,8 @@ class DescribeEdgeCases:
 
         unknown = [s for s in result["stages"] if s["stage_name"] == "Unknown/Deleted Stage"]
         assert len(unknown) == 1
-        assert unknown[0]["cold_count"] == 3  # noqa: PLR2004
-        assert unknown[0]["count"] == 10  # noqa: PLR2004
+        assert unknown[0]["cold_count"] == 3
+        assert unknown[0]["count"] == 10
         # stale_fraction = 3/10 = 0.30 < 0.50 => NOT stale
         # share = 10/11 ≈ 0.91 > 0.30 => concentrated
         # Concentrated but not stale => MEDIUM (not HIGH)
@@ -1092,7 +1092,7 @@ class DescribeEdgeCases:
         unknown = [s for s in result["stages"] if s["stage_name"] == "Unknown/Deleted Stage"]
         assert len(unknown) == 1
         assert unknown[0]["cold_count"] == 1
-        assert unknown[0]["count"] == 2  # noqa: PLR2004
+        assert unknown[0]["count"] == 2
         # stale_fraction = 1/2 = 0.50 (exactly at threshold), share = 2/10 = 0.20 (below)
         assert unknown[0]["severity"] == "LOW"
 
@@ -1273,7 +1273,7 @@ class DescribeUnknownStageMutantTriangulation:
         result = await pipeline_health(job_id=100, staleness_days=7, client=client)
 
         unknown_stage = next(s for s in result["stages"] if s["stage_id"] is None)
-        assert unknown_stage["cold_count"] == 2  # noqa: PLR2004
+        assert unknown_stage["cold_count"] == 2
 
     @pytest.mark.anyio
     async def it_computes_unknown_stale_fraction_as_division(self) -> None:

@@ -261,6 +261,7 @@ async def _compute_offer_metrics(client: GreenhousePort) -> dict[str, Any]:
         "accepted": accepted,
         "rejected": rejected,
         "acceptance_rate_pct": rate,
+        "offer_scope": "organization-wide",
     }
 
 

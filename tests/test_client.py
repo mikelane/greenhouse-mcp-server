@@ -126,7 +126,7 @@ class DescribeRateLimiting:
         )
         client = _build_client(transport)
         await client.get_jobs()
-        assert client.rate_limit_remaining == 7  # noqa: PLR2004
+        assert client.rate_limit_remaining == 7
 
     @pytest.mark.anyio
     async def it_tracks_rate_limit_reset_timestamp(self) -> None:
@@ -211,7 +211,7 @@ class DescribeErrorHandling:
         client = _build_client(transport)
         with pytest.raises(RateLimitError) as exc_info:
             await client.get_jobs()
-        assert exc_info.value.retry_after == 5.0  # noqa: PLR2004
+        assert exc_info.value.retry_after == 5.0
 
     @pytest.mark.anyio
     async def it_raises_server_error_on_500(self) -> None:
@@ -236,7 +236,7 @@ class DescribeErrorHandling:
         client = _build_client(transport)
         with pytest.raises(ServerError) as exc_info:
             await client.get_jobs()
-        assert exc_info.value.status_code == 502  # noqa: PLR2004
+        assert exc_info.value.status_code == 502
 
 
 @pytest.mark.small
@@ -248,7 +248,7 @@ class DescribeRetries:
         def handler(_request: httpx.Request) -> httpx.Response:
             nonlocal call_count
             call_count += 1
-            if call_count <= 2:  # noqa: PLR2004
+            if call_count <= 2:
                 return _make_response(
                     status_code=429,
                     json_data={"message": "Rate limit"},
@@ -259,7 +259,7 @@ class DescribeRetries:
         client = _build_client(httpx.MockTransport(handler), max_retries=3)
         result = await client.get_jobs()
         assert result == [{"id": 1}]
-        assert call_count == 3  # noqa: PLR2004
+        assert call_count == 3
 
     @pytest.mark.anyio
     async def it_raises_after_exhausting_retries_on_429(self) -> None:
@@ -291,7 +291,7 @@ class DescribeRetries:
         client = _build_client(httpx.MockTransport(handler), max_retries=2)
         result = await client.get_jobs()
         assert result == [{"id": 2}]
-        assert call_count == 2  # noqa: PLR2004
+        assert call_count == 2
 
     @pytest.mark.anyio
     async def it_raises_after_exhausting_retries_on_500(self) -> None:
@@ -344,7 +344,7 @@ class DescribePagination:
         client = _build_client(httpx.MockTransport(handler))
         result = await client.get_jobs()
         assert result == [{"id": 1}, {"id": 2}]
-        assert call_count == 2  # noqa: PLR2004
+        assert call_count == 2
 
     @pytest.mark.anyio
     async def it_follows_multiple_pages(self) -> None:
@@ -360,7 +360,7 @@ class DescribePagination:
                         "Link": '<https://harvest.greenhouse.io/v1/jobs?page=2&per_page=500>; rel="next"',
                     },
                 )
-            if call_count == 2:  # noqa: PLR2004
+            if call_count == 2:
                 return _make_response(
                     json_data=[{"id": 2}],
                     headers={
@@ -372,7 +372,7 @@ class DescribePagination:
         client = _build_client(httpx.MockTransport(handler))
         result = await client.get_jobs()
         assert result == [{"id": 1}, {"id": 2}, {"id": 3}]
-        assert call_count == 3  # noqa: PLR2004
+        assert call_count == 3
 
     @pytest.mark.anyio
     async def it_stops_when_no_link_header_present(self) -> None:
@@ -814,9 +814,9 @@ class DescribeRateLimitHeaderAbsence:
             )
         )
         client = _build_client(transport)
-        assert client.rate_limit_remaining == 50  # noqa: PLR2004
+        assert client.rate_limit_remaining == 50
         await client.get_jobs()
-        assert client.rate_limit_remaining == 50  # noqa: PLR2004
+        assert client.rate_limit_remaining == 50
 
     @pytest.mark.anyio
     async def it_preserves_default_reset_when_header_is_absent(self) -> None:
@@ -843,7 +843,7 @@ class DescribeRateLimitHeaderAbsence:
         )
         client = _build_client(transport)
         await client.get_jobs()
-        assert client.rate_limit_remaining == 25  # noqa: PLR2004
+        assert client.rate_limit_remaining == 25
         assert client.rate_limit_reset == 0
 
     @pytest.mark.anyio
@@ -857,8 +857,8 @@ class DescribeRateLimitHeaderAbsence:
         )
         client = _build_client(transport)
         await client.get_jobs()
-        assert client.rate_limit_remaining == 50  # noqa: PLR2004
-        assert client.rate_limit_reset == 1700000000  # noqa: PLR2004
+        assert client.rate_limit_remaining == 50
+        assert client.rate_limit_reset == 1700000000
 
 
 @pytest.mark.small
@@ -874,7 +874,7 @@ class DescribeUnknownStatusCodes:
         client = _build_client(transport)
         with pytest.raises(GreenhouseError, match="I'm a teapot") as exc_info:
             await client.get_jobs()
-        assert exc_info.value.status_code == 418  # noqa: PLR2004
+        assert exc_info.value.status_code == 418
         assert type(exc_info.value) is GreenhouseError
 
 
@@ -930,7 +930,7 @@ class DescribePaginationRetry:
                         "Link": '<https://harvest.greenhouse.io/v1/jobs?page=2&per_page=500>; rel="next"',
                     },
                 )
-            if call_count == 2:  # noqa: PLR2004
+            if call_count == 2:
                 return _make_response(
                     status_code=429,
                     json_data={"message": "Rate limit"},
@@ -941,7 +941,7 @@ class DescribePaginationRetry:
         client = _build_client(httpx.MockTransport(handler), max_retries=2)
         result = await client.get_jobs()
         assert result == [{"id": 1}, {"id": 2}]
-        assert call_count == 3  # noqa: PLR2004
+        assert call_count == 3
 
     @pytest.mark.anyio
     async def it_retries_500_on_second_page_instead_of_crashing(self) -> None:
@@ -957,7 +957,7 @@ class DescribePaginationRetry:
                         "Link": '<https://harvest.greenhouse.io/v1/jobs?page=2&per_page=500>; rel="next"',
                     },
                 )
-            if call_count == 2:  # noqa: PLR2004
+            if call_count == 2:
                 return _make_response(
                     status_code=500,
                     json_data={"message": "Server error"},
@@ -967,7 +967,7 @@ class DescribePaginationRetry:
         client = _build_client(httpx.MockTransport(handler), max_retries=2)
         result = await client.get_jobs()
         assert result == [{"id": 1}, {"id": 2}]
-        assert call_count == 3  # noqa: PLR2004
+        assert call_count == 3
 
     @pytest.mark.anyio
     async def it_raises_after_exhausting_retries_on_paginated_429(self) -> None:
@@ -1008,7 +1008,7 @@ class DescribeExponentialBackoff:
         def handler(_request: httpx.Request) -> httpx.Response:
             nonlocal call_count
             call_count += 1
-            if call_count <= 3:  # noqa: PLR2004
+            if call_count <= 3:
                 return _make_response(
                     status_code=500,
                     json_data={"message": "Server error"},
@@ -1022,7 +1022,7 @@ class DescribeExponentialBackoff:
         )
         result = await client.get_jobs()
         assert result == [{"id": 1}]
-        assert len(sleep_durations) == 3  # noqa: PLR2004
+        assert len(sleep_durations) == 3
         assert sleep_durations[1] > sleep_durations[0]
         assert sleep_durations[2] > sleep_durations[1]
 
@@ -1054,7 +1054,7 @@ class DescribeExponentialBackoff:
         result = await client.get_jobs()
         assert result == [{"id": 1}]
         assert len(sleep_durations) == 1
-        assert sleep_durations[0] == 7.0  # noqa: PLR2004
+        assert sleep_durations[0] == 7.0
 
     @pytest.mark.anyio
     async def it_does_not_sleep_before_the_first_attempt(self) -> None:
@@ -1314,7 +1314,7 @@ class DescribeExactRetryCount:
         client = _build_client(httpx.MockTransport(handler), max_retries=3)
         with pytest.raises(ServerError):
             await client.get_jobs()
-        assert call_count == 4  # noqa: PLR2004
+        assert call_count == 4
 
     @pytest.mark.anyio
     async def it_makes_exactly_one_attempt_when_max_retries_is_zero(self) -> None:
@@ -1353,7 +1353,7 @@ class DescribeExactRetryCount:
         )
         with pytest.raises(ServerError):
             await client.get_jobs()
-        assert len(sleep_durations) == 3  # noqa: PLR2004
+        assert len(sleep_durations) == 3
 
 
 @pytest.mark.small
@@ -1392,7 +1392,7 @@ class DescribeRetryableStatusBoundary:
         client = _build_client(httpx.MockTransport(handler), max_retries=3)
         result = await client.get_jobs()
         assert result == [{"id": 1}]
-        assert call_count == 2  # noqa: PLR2004
+        assert call_count == 2
 
     @pytest.mark.anyio
     async def it_retries_status_501(self) -> None:
@@ -1411,7 +1411,7 @@ class DescribeRetryableStatusBoundary:
         client = _build_client(httpx.MockTransport(handler), max_retries=3)
         result = await client.get_jobs()
         assert result == [{"id": 1}]
-        assert call_count == 2  # noqa: PLR2004
+        assert call_count == 2
 
 
 @pytest.mark.small
@@ -1469,7 +1469,7 @@ class DescribePaginationIterationCount:
                         "Link": '<https://harvest.greenhouse.io/v1/jobs?page=2&per_page=500>; rel="next"',
                     },
                 )
-            if call_count == 2:  # noqa: PLR2004
+            if call_count == 2:
                 return _make_response(
                     json_data=[{"id": 2}],
                     headers={
@@ -1480,8 +1480,8 @@ class DescribePaginationIterationCount:
 
         client = _build_client(httpx.MockTransport(handler))
         result = await client.get_jobs()
-        assert len(result) == 3  # noqa: PLR2004
-        assert call_count == 3  # noqa: PLR2004
+        assert len(result) == 3
+        assert call_count == 3
 
     @pytest.mark.anyio
     async def it_makes_exactly_one_request_for_single_page(self) -> None:
@@ -1512,7 +1512,7 @@ class DescribeExponentialBackoffValues:
         def handler(_request: httpx.Request) -> httpx.Response:
             nonlocal call_count
             call_count += 1
-            if call_count <= 4:  # noqa: PLR2004
+            if call_count <= 4:
                 return _make_response(
                     status_code=500,
                     json_data={"message": "Server error"},
@@ -1526,7 +1526,7 @@ class DescribeExponentialBackoffValues:
         )
         result = await client.get_jobs()
         assert result == [{"id": 1}]
-        assert len(sleep_durations) == 4  # noqa: PLR2004
+        assert len(sleep_durations) == 4
         # 2**0=1, 2**1=2, 2**2=4, 2**3=8
         # If mutated to 2*attempt: 2*0=0, 2*1=2, 2*2=4, 2*3=6
         # Attempt 3 distinguishes: 2**3=8 vs 2*3=6
@@ -1545,7 +1545,7 @@ class DescribeLastExceptionTracking:
         def handler(_request: httpx.Request) -> httpx.Response:
             nonlocal call_count
             call_count += 1
-            if call_count <= 2:  # noqa: PLR2004
+            if call_count <= 2:
                 return _make_response(
                     status_code=500,
                     json_data={"message": f"Server error attempt {call_count}"},
@@ -1558,5 +1558,5 @@ class DescribeLastExceptionTracking:
         client = _build_client(httpx.MockTransport(handler), max_retries=2)
         with pytest.raises(ServerError, match="Bad gateway final") as exc_info:
             await client.get_jobs()
-        assert exc_info.value.status_code == 502  # noqa: PLR2004
-        assert call_count == 3  # noqa: PLR2004
+        assert exc_info.value.status_code == 502
+        assert call_count == 3

@@ -18,7 +18,7 @@ class DescribeGreenhouseError:
     def it_is_a_base_exception_for_all_greenhouse_errors(self) -> None:
         error = GreenhouseError("something went wrong", status_code=500)
         assert str(error) == "something went wrong"
-        assert error.status_code == 500  # noqa: PLR2004
+        assert error.status_code == 500
 
     def it_defaults_status_code_to_zero(self) -> None:
         error = GreenhouseError("generic error")
@@ -33,7 +33,7 @@ class DescribeAuthenticationError:
 
     def it_defaults_to_status_code_401(self) -> None:
         error = AuthenticationError("invalid credentials")
-        assert error.status_code == 401  # noqa: PLR2004
+        assert error.status_code == 401
 
 
 @pytest.mark.small
@@ -44,7 +44,7 @@ class DescribeGreenhousePermissionError:
 
     def it_defaults_to_status_code_403(self) -> None:
         error = GreenhousePermissionError("forbidden")
-        assert error.status_code == 403  # noqa: PLR2004
+        assert error.status_code == 403
 
 
 @pytest.mark.small
@@ -55,7 +55,7 @@ class DescribeNotFoundError:
 
     def it_defaults_to_status_code_404(self) -> None:
         error = NotFoundError("resource missing")
-        assert error.status_code == 404  # noqa: PLR2004
+        assert error.status_code == 404
 
 
 @pytest.mark.small
@@ -66,7 +66,7 @@ class DescribeValidationError:
 
     def it_defaults_to_status_code_422(self) -> None:
         error = ValidationError("validation failed", errors=[])
-        assert error.status_code == 422  # noqa: PLR2004
+        assert error.status_code == 422
 
     def it_carries_the_errors_array(self) -> None:
         errors = [{"field": "type", "message": "Must be one of: candidate, prospect"}]
@@ -82,11 +82,11 @@ class DescribeRateLimitError:
 
     def it_defaults_to_status_code_429(self) -> None:
         error = RateLimitError("rate limited", retry_after=10.0)
-        assert error.status_code == 429  # noqa: PLR2004
+        assert error.status_code == 429
 
     def it_carries_retry_after_seconds(self) -> None:
         error = RateLimitError("rate limited", retry_after=7.5)
-        assert error.retry_after == 7.5  # noqa: PLR2004
+        assert error.retry_after == 7.5
 
 
 @pytest.mark.small
@@ -97,8 +97,8 @@ class DescribeServerError:
 
     def it_defaults_to_status_code_500(self) -> None:
         error = ServerError("server blew up")
-        assert error.status_code == 500  # noqa: PLR2004
+        assert error.status_code == 500
 
     def it_accepts_other_5xx_status_codes(self) -> None:
         error = ServerError("bad gateway", status_code=502)
-        assert error.status_code == 502  # noqa: PLR2004
+        assert error.status_code == 502

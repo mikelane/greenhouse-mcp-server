@@ -7,11 +7,7 @@ from typing import Any
 
 import pytest
 
-from greenhouse_mcp.tools.velocity import _build_buckets, hiring_velocity
-
-
-def _iso(days_ago: int) -> str:
-    return (datetime.now(tz=UTC) - timedelta(days=days_ago)).isoformat()
+from greenhouse_mcp.tools.velocity import hiring_velocity
 
 
 def _iso_at(dt: datetime) -> str:
@@ -388,6 +384,15 @@ class DescribeOfferMetrics:
         assert result["offer_metrics"]["acceptance_rate_pct"] == pytest.approx(100.0)
 
     @pytest.mark.anyio
+    async def it_documents_offer_scope_as_organization_wide(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+
+        result = await hiring_velocity(job_id=10, client=client, now=now)
+
+        assert result["offer_metrics"]["offer_scope"] == "organization-wide"
+
+    @pytest.mark.anyio
     async def it_returns_zero_acceptance_rate_when_no_decided_offers(self) -> None:
         now = datetime(2026, 3, 15, tzinfo=UTC)
         client = FakeGreenhouseClient()
@@ -587,12 +592,15 @@ class DescribeBuildBucketsEdgeCases:
         assert result["weekly_buckets"] == []
         assert result["total_applications"] == 0
 
-    def it_skips_application_created_before_all_bucket_starts(self) -> None:
-        start = datetime(2026, 3, 1, tzinfo=UTC)
-        end = datetime(2026, 3, 15, tzinfo=UTC)
-        # Application created before the start of the range
-        apps = [{"created_at": _iso_at(datetime(2026, 2, 20, tzinfo=UTC))}]
+    @pytest.mark.anyio
+    async def it_excludes_application_created_before_time_range_from_all_buckets(self) -> None:
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+        # Application created well before the 14-day lookback window (starts March 1)
+        client.applications = [
+            {"id": 1, "created_at": _iso_at(datetime(2026, 2, 20, tzinfo=UTC)), "jobs": [{"id": 10}]},
+        ]
 
-        buckets = _build_buckets(apps, start=start, end=end, bucket_size_days=7)
+        result = await hiring_velocity(job_id=10, client=client, now=now, days=14)
 
-        assert all(b["count"] == 0 for b in buckets)
+        assert all(b["count"] == 0 for b in result["weekly_buckets"])
