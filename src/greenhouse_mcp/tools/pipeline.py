@@ -103,8 +103,11 @@ def _analyze_single_job(
 
         days_values = [_days_since(a["last_activity_at"]) for a in stage_apps]
         avg_days = sum(days_values) / len(days_values) if days_values else 0.0
-        # gremlin: pardon[untestable] float never equals int threshold
-        cold_count = sum(1 for d in days_values if d >= staleness_days)
+        cold_count = sum(
+            1
+            for d in days_values
+            if d >= staleness_days  # gremlin: pardon[untestable] float!=int
+        )
         stale_fraction = cold_count / count if count > 0 else 0.0
 
         severity = _classify_severity(share, stale_fraction, bottleneck_threshold)
@@ -128,14 +131,23 @@ def _analyze_single_job(
 
     if unknown_apps:
         unknown_count = len(unknown_apps)
-        # gremlin: pardon[equivalent] >0 and >=0 identical for non-negative len()
-        unknown_share = unknown_count / total_active if total_active > 0 else 0.0
+        unknown_share = (
+            unknown_count / total_active
+            if total_active > 0  # gremlin: pardon[equivalent] len()>=0
+            else 0.0
+        )
         unknown_days = [_days_since(a["last_activity_at"]) for a in unknown_apps]
         unknown_avg = sum(unknown_days) / len(unknown_days) if unknown_days else 0.0
-        # gremlin: pardon[untestable] float never equals int threshold
-        unknown_cold = sum(1 for d in unknown_days if d >= staleness_days)
-        # gremlin: pardon[equivalent] >0 and >=0 identical for non-negative len()
-        unknown_stale_frac = unknown_cold / unknown_count if unknown_count > 0 else 0.0
+        unknown_cold = sum(
+            1
+            for d in unknown_days
+            if d >= staleness_days  # gremlin: pardon[untestable] float!=int
+        )
+        unknown_stale_frac = (
+            unknown_cold / unknown_count
+            if unknown_count > 0  # gremlin: pardon[equivalent] len()>=0
+            else 0.0
+        )
         unknown_severity = _classify_severity(unknown_share, unknown_stale_frac, bottleneck_threshold)
         unknown_is_bottleneck = unknown_severity in {"HIGH", "MEDIUM"}
 
