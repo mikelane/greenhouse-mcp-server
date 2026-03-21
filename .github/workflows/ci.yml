@@ -62,7 +62,7 @@ jobs:
         with:
           command-prefix: 'uv run'
           skip-install: 'true'
-          extra-args: '--gremlin-exclude=src/greenhouse_mcp/fake_client.py'
+          targets: 'src/greenhouse_mcp/client.py,src/greenhouse_mcp/server.py,src/greenhouse_mcp/container.py,src/greenhouse_mcp/dependencies.py,src/greenhouse_mcp/exceptions.py,src/greenhouse_mcp/models.py,src/greenhouse_mcp/tools/'
           parallel: 'true'
           cache: 'true'
           ratchet-file: '.gremlins-score'
