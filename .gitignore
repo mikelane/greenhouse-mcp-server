@@ -12,3 +12,9 @@ htmlcov/
 .env
 bdd/node_modules/
 bdd/dist/
+coverage/
+recordings/clips/
+recordings/sections/
+recordings/*.cast
+recordings/*.gif
+recordings/*-video.mp4

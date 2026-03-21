@@ -78,6 +78,24 @@ uv run greenhouse-mcp
 uv run greenhouse-mcp --transport sse --port 8080
 ```
 
+## Test Doubles Are Adapters (MANDATORY)
+
+Every port gets exactly ONE test double, registered as a dioxide adapter for `Profile.TEST`:
+
+```python
+@adapter.for_(GreenhousePort, profile=Profile.TEST)
+class FakeGreenhouseClient:
+    ...
+```
+
+This fake is:
+- The **ONLY** test double for this port (no per-test-file copies)
+- Shared across all test files via dioxide container resolution
+- Pre-populated with realistic data (enough to demo, not just pass tests)
+- The same fake used in tests AND in narrated demos
+
+If you find yourself writing `class FakeX` in a test file, you've already failed. Resolve it from the container.
+
 ## Code Standards
 
 - Python 3.14 (bleeding edge — portfolio piece)
