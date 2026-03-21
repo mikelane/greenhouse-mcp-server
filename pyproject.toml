@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "greenhouse-mcp-server"
-version = "0.1.0"
+version = "0.3.0"
 description = "An MCP server providing workflow-oriented access to the Greenhouse recruiting platform's Harvest API"
 readme = "README.md"
 license = "MIT"
@@ -18,12 +18,18 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries",
 ]
+
 dependencies = [
     "fastmcp>=3.1",
     "httpx>=0.28",
     "pydantic>=2.12",
     "dioxide>=2.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/mikelane/greenhouse-mcp-server"
+Repository = "https://github.com/mikelane/greenhouse-mcp-server"
+Issues = "https://github.com/mikelane/greenhouse-mcp-server/issues"
 
 [project.scripts]
 greenhouse-mcp = "greenhouse_mcp.server:main"
