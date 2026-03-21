@@ -1604,21 +1604,24 @@ class DescribeCacheHitBranches:
     """Cover the cache-hit branches for candidate_cache and stages_cache."""
 
     @pytest.mark.anyio
-    async def it_reuses_cached_candidate_and_stages_on_second_item(self) -> None:
-        """Lines 319->321, 326->328: second item for same candidate/job hits cache."""
+    async def it_reuses_cached_candidate_and_stages_on_second_offer(self) -> None:
+        """Lines 319->321, 326->328: second pending offer for same candidate hits cache."""
         now = datetime.now(tz=UTC)
         client = FakeGreenhouseClient()
-        # Two stale apps from the SAME candidate and job → second hits cache
         client.applications = [
-            _make_application(
-                app_id=1,
-                candidate_id=100,
-                last_activity_at=now - timedelta(days=10),
+            _make_application(app_id=1, candidate_id=100),
+        ]
+        # Two pending offers from same candidate/job → second hits cache
+        client.offers = [
+            _make_offer(
+                offer_id=1,
+                sent_at=(now - timedelta(days=5)).strftime("%Y-%m-%d"),
+                created_at=now - timedelta(days=6),
             ),
-            _make_application(
-                app_id=2,
-                candidate_id=100,
-                last_activity_at=now - timedelta(days=12),
+            _make_offer(
+                offer_id=2,
+                sent_at=(now - timedelta(days=8)).strftime("%Y-%m-%d"),
+                created_at=now - timedelta(days=9),
             ),
         ]
         client.candidates = {
@@ -1628,8 +1631,8 @@ class DescribeCacheHitBranches:
             10: [{"id": 1, "name": "Phone Screen", "priority": 0, "active": True}],
         }
 
-        result = await needs_attention(client=client, days_stale=7, now=now)
+        result = await needs_attention(client=client, days_stale=100, now=now)
 
-        stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
-        assert len(stuck) == 2  # noqa: PLR2004
-        assert all(i["candidate_name"] == "Jane Doe" for i in stuck)
+        pending = [i for i in result["items"] if i["type"] == "pending_offer"]
+        assert len(pending) == 2  # noqa: PLR2004
+        assert all(i["candidate_name"] == "Jane Doe" for i in pending)
