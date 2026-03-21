@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Demo: greenhouse-mcp tools with realistic recruiting data.
 
-Runs all 3 implemented tools against the FakeGreenhouseClient
+Runs all 5 implemented tools against the FakeGreenhouseClient
 and prints formatted output showing what a recruiter would see.
 """
 
@@ -11,10 +11,14 @@ import asyncio
 
 # Force the fake client module to be imported so dioxide discovers the adapter
 import greenhouse_mcp.fake_client as _  # noqa: F401
+from datetime import UTC, datetime
+
 from greenhouse_mcp.fake_client import FakeGreenhouseClient
 from greenhouse_mcp.tools.attention import needs_attention
 from greenhouse_mcp.tools.candidate import candidate_dossier
 from greenhouse_mcp.tools.pipeline import pipeline_health
+from greenhouse_mcp.tools.search import search_talent
+from greenhouse_mcp.tools.velocity import hiring_velocity
 
 BLUE = "\033[1;34m"
 GREEN = "\033[1;32m"
@@ -159,8 +163,86 @@ async def demo_attention(client: FakeGreenhouseClient) -> None:
         )
 
 
+async def demo_velocity(client: FakeGreenhouseClient) -> None:
+    """Demo 4: Are we getting faster or slower at hiring?"""
+    _header("hiring_velocity: Are we getting faster at hiring?")
+    print(f"  {DIM}Recruiter asks:{RESET} {BOLD}Show me hiring velocity for Senior SWE{RESET}\n")
+
+    now = datetime(2026, 3, 15, tzinfo=UTC)
+    result = await hiring_velocity(job_id=1001, client=client, now=now)
+
+    time_range = result["time_range"]
+    _kv("Time range", f"{time_range['start']} to {time_range['end']} ({time_range['days']} days)")
+    _kv("Total applications", result["total_applications"])
+    _kv("Trend", result["trend"])
+
+    details = result["trend_details"]
+    _kv("Recent avg", f"{details['recent_avg']:.1f} apps/week")
+    _kv("Previous avg", f"{details['previous_avg']:.1f} apps/week")
+    _kv("Change", f"{details['change_pct']:.0f}%")
+
+    if result.get("warning"):
+        print(f"\n  {YELLOW}Warning: {result['warning']}{RESET}")
+
+    offers = result["offer_metrics"]
+    _subheader("Offer Metrics")
+    _kv("Acceptance rate", f"{offers['acceptance_rate_pct']:.0f}%")
+    _kv("Accepted", offers["accepted"])
+    _kv("Rejected", offers["rejected"])
+    _kv("Scope", offers["offer_scope"])
+
+    _subheader("Weekly Buckets")
+    for bucket in result["weekly_buckets"][-6:]:
+        bar = "=" * bucket["count"]
+        print(f"    {bucket['week_start']}  {bucket['count']:2d}  {GREEN}{bar}{RESET}")
+
+    # Department breakdown
+    print(f"\n  {DIM}Recruiter asks:{RESET} {BOLD}Show me velocity across all departments{RESET}\n")
+    dept_result = await hiring_velocity(client=client, now=now)
+
+    if "departments" in dept_result:
+        for dept in dept_result["departments"]:
+            _subheader(f"Department: {dept['department_name']}")
+            _kv("Applications", dept["total_applications"])
+            _kv("Trend", dept["trend"])
+
+
+async def demo_search(client: FakeGreenhouseClient) -> None:
+    """Demo 5: Find candidates matching criteria."""
+    _header("search_talent: Find me candidates matching...")
+
+    # Search by name
+    print(f"  {DIM}Recruiter asks:{RESET} {BOLD}Find candidates named Maria{RESET}\n")
+    result = await search_talent(query="Maria", client=client)
+
+    _kv("Query", result["query"])
+    _kv("Results", result["total_results"])
+    for r in result["results"]:
+        print(
+            f"\n    {BOLD}{r['name']}{RESET}  "
+            f"(relevance: {r['relevance_score']:.0f})"
+        )
+        _kv("Email", r["email"], indent=6)
+        _kv("Tags", ", ".join(r["tags"]) if r["tags"] else "none", indent=6)
+        for app in r["current_applications"]:
+            print(
+                f"      {DIM}Application:{RESET} {app['job_name']} "
+                f"({app['status']}) - {app['stage']}"
+            )
+
+    # Search by tags
+    print(f"\n\n  {DIM}Recruiter asks:{RESET} {BOLD}Find all senior candidates{RESET}\n")
+    tag_result = await search_talent(tags=["senior"], client=client)
+
+    _kv("Filter", "tags=senior")
+    _kv("Results", tag_result["total_results"])
+    for r in tag_result["results"]:
+        apps_summary = ", ".join(f"{a['job_name']} ({a['stage']})" for a in r["current_applications"])
+        print(f"    {BOLD}{r['name']}{RESET}  tags={r['tags']}  {DIM}{apps_summary}{RESET}")
+
+
 async def main() -> None:
-    """Run all three tool demos."""
+    """Run all five tool demos."""
     client = FakeGreenhouseClient()
 
     await demo_pipeline(client)
@@ -168,6 +250,10 @@ async def main() -> None:
     await demo_candidate(client)
     print()
     await demo_attention(client)
+    print()
+    await demo_velocity(client)
+    print()
+    await demo_search(client)
 
     print(f"\n{BLUE}{'=' * 60}{RESET}")
     print(f"{GREEN}  greenhouse-mcp: Workflow-oriented recruiting intelligence{RESET}")

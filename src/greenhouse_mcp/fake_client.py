@@ -465,6 +465,11 @@ _ALL_APPLICATIONS: list[dict[str, Any]] = []
 for _c in _CANDIDATES:
     _ALL_APPLICATIONS.extend(_c["applications"])
 
+# Ensure every application has created_at (mirrors real Greenhouse API)
+for _app in _ALL_APPLICATIONS:
+    if "created_at" not in _app:
+        _app["created_at"] = _app["applied_at"]
+
 # ---------------------------------------------------------------------------
 # Scorecards
 # ---------------------------------------------------------------------------
