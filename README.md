@@ -2,6 +2,10 @@
 
 An MCP server that gives AI agents workflow-oriented access to the [Greenhouse](https://www.greenhouse.io/) recruiting platform. Instead of mirroring the REST API endpoint-by-endpoint, each tool answers a question a recruiter or hiring manager actually asks.
 
+[![Demo: Complete Walkthrough](https://img.youtube.com/vi/BfHNOBYvfR8/maxresdefault.jpg)](https://youtu.be/BfHNOBYvfR8)
+
+> **2:26 narrated walkthrough** — all 5 tools, live quality gates, architecture overview
+
 ## Design Philosophy
 
 Traditional API wrappers expose endpoints. This server exposes **workflows**. Each tool composes multiple Greenhouse Harvest API calls into a single response that answers a real question, saving the agent (and the user) from spending tokens coordinating across low-level operations.
