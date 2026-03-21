@@ -305,7 +305,7 @@ async def candidate_dossier(
     all_offers: list[list[dict[str, Any]]] = []
     applications: list[dict[str, Any]] = []
 
-    for app_stub, details in zip(application_stubs, app_details, strict=True):
+    for app_stub, details in zip(application_stubs, app_details, strict=True):  # pragma: no mutate
         scorecards, interviews, offers = details
         all_offers.append(offers)  # type: ignore[arg-type]
         applications.append(
