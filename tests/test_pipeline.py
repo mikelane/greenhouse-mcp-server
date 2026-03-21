@@ -1200,7 +1200,7 @@ class DescribeUnknownStageMutantTriangulation:
         result = await pipeline_health(job_id=100, staleness_days=8, client=client)
 
         stage = result["stages"][0]
-        assert stage["cold_count"] == 1  # noqa: PLR2004
+        assert stage["cold_count"] == 1
 
     @pytest.mark.anyio
     async def it_does_not_count_cold_when_days_below_staleness(self) -> None:
