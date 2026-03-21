@@ -120,3 +120,6 @@ addopts = [
     "--cov-fail-under=100",
 ]
 test_categories_enforcement = "strict"
+
+[tool.pytest-gremlins]
+exclude = ["src/greenhouse_mcp/fake_client.py"]
