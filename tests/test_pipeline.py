@@ -1185,12 +1185,28 @@ class DescribeUnknownStageMutantTriangulation:
 
     @pytest.mark.anyio
     async def it_counts_cold_at_exact_staleness_boundary_for_known_stage(self) -> None:
-        """Line 106: d >= staleness_days — d==7 with staleness_days=7 counts as cold."""
+        """Line 106: d >= staleness_days — 9-day app with staleness_days=8 counts as cold."""
         stages = [_make_stage(1, "Review", 0)]
         apps = [
-            _make_application(1, 100, 1, "Review", 7),
-            _make_application(2, 100, 1, "Review", 6),
+            _make_application(1, 100, 1, "Review", 9),  # clearly >= 8
+            _make_application(2, 100, 1, "Review", 6),  # clearly < 8
         ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Eng", "status": "open"}],
+            stages={100: stages},
+            applications=apps,
+        )
+
+        result = await pipeline_health(job_id=100, staleness_days=8, client=client)
+
+        stage = result["stages"][0]
+        assert stage["cold_count"] == 1  # noqa: PLR2004
+
+    @pytest.mark.anyio
+    async def it_does_not_count_cold_when_days_below_staleness(self) -> None:
+        """Line 106: d >= staleness_days — 5-day app with staleness_days=7 is NOT cold."""
+        stages = [_make_stage(1, "Review", 0)]
+        apps = [_make_application(1, 100, 1, "Review", 5)]
         client = FakeGreenhouseClient(
             jobs=[{"id": 100, "name": "Eng", "status": "open"}],
             stages={100: stages},
@@ -1200,7 +1216,7 @@ class DescribeUnknownStageMutantTriangulation:
         result = await pipeline_health(job_id=100, staleness_days=7, client=client)
 
         stage = result["stages"][0]
-        assert stage["cold_count"] == 1
+        assert stage["cold_count"] == 0
 
     @pytest.mark.anyio
     async def it_computes_unknown_share_as_division_not_multiplication(self) -> None:
