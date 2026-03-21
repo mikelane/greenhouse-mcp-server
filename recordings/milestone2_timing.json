@@ -1,50 +1,50 @@
 [
   {
     "name": "intro",
-    "text": "Milestone 2 delivers three recruiting workflow tools. Each one answers a question a recruiter actually asks, composing multiple Greenhouse API calls into a single response.\n\n<!-- SECTION: pipeline -->",
-    "duration": 11.28,
+    "text": "This is greenhouse mcp server in action. Three tools, each answering a question a recruiter actually asks. Watch the output, not the code.",
+    "duration": 9.1,
     "clip": "milestone2_intro.mp3"
   },
   {
-    "name": "pipeline_intro",
-    "text": "First, pipeline health. This tool answers where are things stuck for a given role. It groups applications by stage, calculates days since last activity, and flags bottleneck stages where candidates are piling up.",
-    "duration": 12.49,
-    "clip": "milestone2_pipeline_intro.mp3"
+    "name": "pipeline_question",
+    "text": "First question: where are things stuck for the Senior Software Engineer role? The pipeline health tool fetches job stages and applications, groups candidates by stage, and detects bottlenecks.",
+    "duration": 12.26,
+    "clip": "milestone2_pipeline_question.mp3"
   },
   {
-    "name": "pipeline_tests",
-    "text": "44 tests cover the bottleneck detection algorithm. A stage is flagged when its share of the pipeline exceeds 30 percent. Severity is high when more than half those candidates have gone cold. Every boundary condition and arithmetic operator is verified by mutation testing.\n\n<!-- SECTION: candidate -->",
-    "duration": 17.41,
-    "clip": "milestone2_pipeline_tests.mp3"
+    "name": "pipeline_result",
+    "text": "Technical Interview is flagged as a bottleneck. Five candidates, 71 percent of the pipeline, severity high. Average 13 days idle. The recruiter knows exactly where to focus.",
+    "duration": 11.75,
+    "clip": "milestone2_pipeline_result.mp3"
   },
   {
-    "name": "candidate_intro",
-    "text": "Next, candidate dossier. This answers tell me everything about this person. It fetches the candidate profile, then concurrently gathers scorecards, interviews, and offers for every application, plus the full activity feed. Summary first, details second.",
-    "duration": 14.95,
-    "clip": "milestone2_candidate_intro.mp3"
+    "name": "candidate_question",
+    "text": "Second question: tell me everything about Maria Chen. The candidate dossier tool fetches her profile, all applications, scorecards, offers, and activity feed in parallel.",
+    "duration": 11.47,
+    "clip": "milestone2_candidate_question.mp3"
   },
   {
-    "name": "candidate_tests",
-    "text": "34 tests verify the concurrent assembly logic. The fake client injects canned data through the same protocol interface the production client uses. No mocking of internals, no patching of import paths.\n\n<!-- SECTION: attention -->",
-    "duration": 11.7,
-    "clip": "milestone2_candidate_tests.mp3"
+    "name": "candidate_result",
+    "text": "Maria was hired as a Senior Software Engineer. Strong yes on the technical interview, yes on system design. Offer accepted. She also has an active application for Product Manager in the hiring manager screen stage. Eleven activity items show the full story.",
+    "duration": 17.04,
+    "clip": "milestone2_candidate_result.mp3"
   },
   {
-    "name": "attention_intro",
-    "text": "Finally, needs attention. This answers what is falling through the cracks. It scans for stale applications, missing scorecards, and pending offers, then ranks them by a three factor priority score: category severity, days overdue, and stage proximity to hire.",
-    "duration": 17.55,
-    "clip": "milestone2_attention_intro.mp3"
+    "name": "attention_question",
+    "text": "Third question: what needs my attention right now? The needs attention tool scans for stale applications, missing scorecards, and pending offers, then ranks them by priority.",
+    "duration": 11.33,
+    "clip": "milestone2_attention_question.mp3"
   },
   {
-    "name": "attention_tests",
-    "text": "63 tests cover four staleness categories and the priority scoring formula. Every comparison operator, every arithmetic calculation, every threshold boundary is verified. Zero surviving mutants across all three tools.",
-    "duration": 13.98,
-    "clip": "milestone2_attention_tests.mp3"
+    "name": "attention_result",
+    "text": "Eleven action items. Aisha Patel and Alex Tanaka have missing scorecards at the top. Nathan Park has a pending offer sent five days ago with no response. Three candidates are stuck in technical interview for over twelve days. Every item has a priority score and a suggested action.",
+    "duration": 17.37,
+    "clip": "milestone2_attention_result.mp3"
   },
   {
     "name": "closing",
-    "text": "Three tools, 141 tests, 100 percent mutation coverage. The foundation from Milestone 1 made this possible: dependency injection, protocol boundaries, and injectable fakes. Next up: velocity metrics and talent search.",
-    "duration": 16.25,
+    "text": "Three questions, three answers. No API coordination, no token waste. The server does the orchestration so the agent does not have to.",
+    "duration": 7.11,
     "clip": "milestone2_closing.mp3"
   }
 ]

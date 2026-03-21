@@ -1,0 +1,4 @@
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1774072395,"command":"bash recordings/sections/s2-*.sh","env":{"SHELL":"/bin/zsh"}}
+[0.014, "o", "\r\n\u001b[1mRecruiter asks:\u001b[0m Where are things stuck for Senior SWE?\r\n\r\n"]
+[3.084, "o", "  Job: Senior Software Engineer\r\n  Total active: 7 candidates\r\n\r\n    Application Review               1 candidates  14% share  avg 1d idle  -\r\n    Phone Screen                     1 candidates  14% share  avg 15d idle  LOW\r\n    Technical Interview              5 candidates  71% share  avg 13d idle  HIGH << BOTTLENECK\r\n    Onsite                           0 candidates  0% share  avg 0d idle  -\r\n\r\n  Bottlenecks: Technical Interview\r\n"]
+[20.018, "x", "0"]

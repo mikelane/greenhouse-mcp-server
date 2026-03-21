@@ -1,73 +1,101 @@
 #!/usr/bin/env bash
 set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-# Milestone 2 Demo Script — timing calibrated for headless asciinema
-# Each segment sleep = narration duration (display adds negligible time in headless)
+B='\033[1;34m'
+G='\033[1;32m'
+C='\033[1;36m'
+D='\033[1m'
+R='\033[0m'
 
-BLUE='\033[1;34m'
-GREEN='\033[1;32m'
-CYAN='\033[1;36m'
-YELLOW='\033[1;33m'
-RESET='\033[0m'
-
-DEMO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$DEMO_DIR"
-
-show_lines() {
-    bat --style=plain --theme="Monokai Extended" --color=always --line-range="$2" "$1" | pv -qL 2000
-}
-
-replay() {
-    cat "$1" | pv -qL 1500
-}
-
-# -- intro (11.3s) --
-echo -e "\n${BLUE}━━━ Milestone 2: Core Recruiting Tools ━━━${RESET}\n"
-echo -e "${CYAN}Three tools that answer real recruiting questions${RESET}\n"
-echo -e "  pipeline_health   → Where are things stuck?"
-echo -e "  candidate_dossier → Tell me everything about this person"
-echo -e "  needs_attention   → What's falling through the cracks?\n"
-sleep 11.0
-
-# -- pipeline_intro (12.5s) --
-echo -e "\n${BLUE}━━━ pipeline_health ━━━${RESET}\n"
-show_lines src/greenhouse_mcp/tools/pipeline.py 1:40
+echo -e "\n${B}============================================================${R}"
+echo -e "${B}  greenhouse-mcp: Recruiting Intelligence Tools${R}"
+echo -e "${B}============================================================${R}\n"
+echo -e "${C}Three questions. Three answers. Real recruiting data.${R}\n"
 sleep 9.0
 
-# -- pipeline_tests (17.4s) --
-echo -e "\n${BLUE}━━━ Pipeline Tests ━━━${RESET}\n"
-echo -e "$ ${GREEN}uv run pytest tests/test_pipeline.py -q${RESET}\n"
-sleep 0.8
-replay /tmp/m2-pipeline-tests.txt
-sleep 15.0
+echo -e "\n${D}Recruiter asks:${R} Where are things stuck for Senior SWE?\n"
+sleep 2.0
+uv run python -c "
+import asyncio
+from greenhouse_mcp.fake_client import FakeGreenhouseClient
+from greenhouse_mcp.tools.pipeline import pipeline_health
+async def run():
+    c = FakeGreenhouseClient()
+    r = await pipeline_health(job_id=1001, client=c)
+    print(f'  Job: {r[\"job_name\"]}')
+    print(f'  Total active: {r[\"total_active\"]} candidates\n')
+    for s in r['stages']:
+        sv = s.get('severity') or '-'
+        bn = ' << BOTTLENECK' if s.get('is_bottleneck') else ''
+        print(f'    {s[\"stage_name\"]:30s}  {s[\"count\"]:2d} candidates  {s[\"share\"]:.0%} share  avg {s.get(\"avg_days_since_activity\",0):.0f}d idle  {sv}{bn}')
+    if r['bottlenecks']:
+        print(f'\n  Bottlenecks: {\", \".join(r[\"bottlenecks\"])}')
+asyncio.run(run())
+" 2>/dev/null
+sleep 22.0
 
-# -- candidate_intro (15.0s) --
-echo -e "\n\n${BLUE}━━━ candidate_dossier ━━━${RESET}\n"
-show_lines src/greenhouse_mcp/tools/candidate.py 1:40
-sleep 11.0
+echo -e "\n\n${D}Recruiter asks:${R} Tell me everything about Maria Chen\n"
+sleep 2.0
+uv run python -c "
+import asyncio
+from greenhouse_mcp.fake_client import FakeGreenhouseClient
+from greenhouse_mcp.tools.candidate import candidate_dossier
+async def run():
+    c = FakeGreenhouseClient()
+    cs = await c.get_candidates()
+    m = next(x for x in cs if 'Maria' in x.get('first_name',''))
+    r = await candidate_dossier(candidate_id=m['id'], client=c)
+    s = r['summary']
+    print(f'  Name: {s[\"name\"]}')
+    print(f'  Status: {s[\"overall_status\"]}')
+    print(f'  Active applications: {s[\"active_application_count\"]}')
+    print(f'  Pending offers: {\"Yes\" if s[\"has_pending_offers\"] else \"No\"}\n')
+    for app in r['applications']:
+        print(f'  Application: {app[\"job_name\"]} ({app[\"status\"]})')
+        print(f'    Stage: {app.get(\"current_stage\",\"N/A\")}')
+        for sc in app.get('scorecards',[]):
+            sub = 'submitted' if sc.get('submitted_at') else 'DRAFT'
+            print(f'    Scorecard: {sc.get(\"interview\",\"?\")} - {sc.get(\"overall_recommendation\",\"?\")} ({sub})')
+        for o in app.get('offers',[]):
+            print(f'    Offer: {o.get(\"status\",\"?\")}')
+        print()
+    feed = r.get('activity_feed',{})
+    total = feed.get('total_notes',0)+feed.get('total_emails',0)+feed.get('total_activities',0)
+    print(f'  Activity feed: {total} items')
+    for n in feed.get('recent_notes',[])[:2]:
+        print(f'    Note: {n.get(\"body\",\"\")[:70]}...')
+asyncio.run(run())
+" 2>/dev/null
+sleep 26.0
 
-# -- candidate_tests (11.7s) --
-echo -e "\n${BLUE}━━━ Candidate Tests ━━━${RESET}\n"
-echo -e "$ ${GREEN}uv run pytest tests/test_candidate.py -q${RESET}\n"
-sleep 0.8
-replay /tmp/m2-candidate-tests.txt
-sleep 10.0
+echo -e "\n\n${D}Recruiter asks:${R} What needs my attention right now?\n"
+sleep 2.0
+uv run python -c "
+import asyncio
+from greenhouse_mcp.fake_client import FakeGreenhouseClient
+from greenhouse_mcp.tools.attention import needs_attention
+async def run():
+    c = FakeGreenhouseClient()
+    r = await needs_attention(client=c, days_stale=7)
+    s = r['summary']
+    print(f'  Total action items: {r[\"total_items\"]}\n')
+    print(f'    Stuck applications: {s.get(\"stuck_applications\",0)}')
+    print(f'    Missing scorecards: {s.get(\"missing_scorecards\",0)}')
+    print(f'    Pending offers:     {s.get(\"pending_offers\",0)}')
+    print(f'    No activity:        {s.get(\"no_activity\",0)}\n')
+    print('  Priority Action Items:')
+    for item in r['items'][:8]:
+        p = item.get('priority_score',0)
+        t = item['type'].replace('_',' ').title()
+        nm = item.get('candidate_name','?')
+        d = item.get('detail','')[:45]
+        print(f'    [{p:.2f}]  {t:25s}  {nm:20s}  {d}')
+asyncio.run(run())
+" 2>/dev/null
+sleep 26.0
 
-# -- attention_intro (17.6s) --
-echo -e "\n\n${BLUE}━━━ needs_attention ━━━${RESET}\n"
-show_lines src/greenhouse_mcp/tools/attention.py 1:40
-sleep 13.0
-
-# -- attention_tests (14.0s) --
-echo -e "\n${BLUE}━━━ Attention Tests ━━━${RESET}\n"
-echo -e "$ ${GREEN}uv run pytest tests/test_attention.py -q${RESET}\n"
-sleep 0.8
-replay /tmp/m2-attention-tests.txt
+echo -e "\n\n${B}============================================================${R}"
+echo -e "${G}  Three questions. Three answers. Zero token waste.${R}"
+echo -e "${B}============================================================${R}\n"
 sleep 12.0
-
-# -- closing (16.2s + 4s buffer) --
-echo -e "\n\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo -e "${GREEN}  Milestone 2: Core Recruiting Tools — Complete${RESET}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-echo -e "  141 tests  •  100% mutation coverage  •  3 tools\n"
-sleep 24.0

@@ -1,0 +1,4 @@
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1774072385,"command":"bash recordings/sections/s1-*.sh","env":{"SHELL":"/bin/zsh"}}
+[0.011, "o", "\r\n\u001b[1;34m============================================================\u001b[0m\r\n\u001b[1;34m  greenhouse-mcp: Recruiting Intelligence Tools\u001b[0m\r\n\u001b[1;34m============================================================\u001b[0m\r\n\r\n"]
+[0.000, "o", "\u001b[1;36mThree questions. Three answers. Real recruiting data.\u001b[0m\r\n\r\n"]
+[10.008, "x", "0"]

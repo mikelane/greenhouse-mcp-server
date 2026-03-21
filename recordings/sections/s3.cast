@@ -1,0 +1,4 @@
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1774072418,"command":"bash recordings/sections/s3-*.sh","env":{"SHELL":"/bin/zsh"}}
+[0.015, "o", "\r\n\u001b[1mRecruiter asks:\u001b[0m Tell me everything about Maria Chen\r\n\r\n"]
+[3.090, "o", "  Name: Maria Chen\r\n  Status: active\r\n  Active applications: 1\r\n  Pending offers: No\r\n\r\n  Application: Senior Software Engineer (hired)\r\n    Stage: Onsite\r\n    Scorecard: Technical Interview - strong_yes (submitted)\r\n    Scorecard: Onsite - System Design - yes (submitted)\r\n    Offer: accepted\r\n\r\n  Application: Product Manager (active)\r\n    Stage: Hiring Manager Screen\r\n\r\n  Activity feed: 11 items\r\n    Note: Maria had an outstanding onsite. Strong system design and excellent co...\r\n    Note: Offer extended. Very excited about this candidate joining the team....\r\n"]
+[24.018, "x", "0"]

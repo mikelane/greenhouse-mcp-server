@@ -9,34 +9,26 @@
 
 ## Segments
 
-<!-- SECTION: intro -->
-
 <!-- SEGMENT: intro -->
-Milestone 2 delivers three recruiting workflow tools. Each one answers a question a recruiter actually asks, composing multiple Greenhouse API calls into a single response.
+This is greenhouse mcp server in action. Three tools, each answering a question a recruiter actually asks. Watch the output, not the code.
 
-<!-- SECTION: pipeline -->
+<!-- SEGMENT: pipeline_question -->
+First question: where are things stuck for the Senior Software Engineer role? The pipeline health tool fetches job stages and applications, groups candidates by stage, and detects bottlenecks.
 
-<!-- SEGMENT: pipeline_intro -->
-First, pipeline health. This tool answers where are things stuck for a given role. It groups applications by stage, calculates days since last activity, and flags bottleneck stages where candidates are piling up.
+<!-- SEGMENT: pipeline_result -->
+Technical Interview is flagged as a bottleneck. Five candidates, 71 percent of the pipeline, severity high. Average 13 days idle. The recruiter knows exactly where to focus.
 
-<!-- SEGMENT: pipeline_tests -->
-44 tests cover the bottleneck detection algorithm. A stage is flagged when its share of the pipeline exceeds 30 percent. Severity is high when more than half those candidates have gone cold. Every boundary condition and arithmetic operator is verified by mutation testing.
+<!-- SEGMENT: candidate_question -->
+Second question: tell me everything about Maria Chen. The candidate dossier tool fetches her profile, all applications, scorecards, offers, and activity feed in parallel.
 
-<!-- SECTION: candidate -->
+<!-- SEGMENT: candidate_result -->
+Maria was hired as a Senior Software Engineer. Strong yes on the technical interview, yes on system design. Offer accepted. She also has an active application for Product Manager in the hiring manager screen stage. Eleven activity items show the full story.
 
-<!-- SEGMENT: candidate_intro -->
-Next, candidate dossier. This answers tell me everything about this person. It fetches the candidate profile, then concurrently gathers scorecards, interviews, and offers for every application, plus the full activity feed. Summary first, details second.
+<!-- SEGMENT: attention_question -->
+Third question: what needs my attention right now? The needs attention tool scans for stale applications, missing scorecards, and pending offers, then ranks them by priority.
 
-<!-- SEGMENT: candidate_tests -->
-34 tests verify the concurrent assembly logic. The fake client injects canned data through the same protocol interface the production client uses. No mocking of internals, no patching of import paths.
-
-<!-- SECTION: attention -->
-
-<!-- SEGMENT: attention_intro -->
-Finally, needs attention. This answers what is falling through the cracks. It scans for stale applications, missing scorecards, and pending offers, then ranks them by a three factor priority score: category severity, days overdue, and stage proximity to hire.
-
-<!-- SEGMENT: attention_tests -->
-63 tests cover four staleness categories and the priority scoring formula. Every comparison operator, every arithmetic calculation, every threshold boundary is verified. Zero surviving mutants across all three tools.
+<!-- SEGMENT: attention_result -->
+Eleven action items. Aisha Patel and Alex Tanaka have missing scorecards at the top. Nathan Park has a pending offer sent five days ago with no response. Three candidates are stuck in technical interview for over twelve days. Every item has a priority score and a suggested action.
 
 <!-- SEGMENT: closing -->
-Three tools, 141 tests, 100 percent mutation coverage. The foundation from Milestone 1 made this possible: dependency injection, protocol boundaries, and injectable fakes. Next up: velocity metrics and talent search.
+Three questions, three answers. No API coordination, no token waste. The server does the orchestration so the agent does not have to.
