@@ -1177,3 +1177,104 @@ class DescribeEdgeCases:
 
         assert result["total_active"] == 1
         assert result["stages"][0]["count"] == 1
+
+
+@pytest.mark.small
+class DescribeUnknownStageMutantTriangulation:
+    """Kill mutants on the unknown/deleted stage code path (lines 106, 130-134)."""
+
+    @pytest.mark.anyio
+    async def it_counts_cold_at_exact_staleness_boundary_for_known_stage(self) -> None:
+        """Line 106: d >= staleness_days — d==7 with staleness_days=7 counts as cold."""
+        stages = [_make_stage(1, "Review", 0)]
+        apps = [
+            _make_application(1, 100, 1, "Review", 7),
+            _make_application(2, 100, 1, "Review", 6),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Eng", "status": "open"}],
+            stages={100: stages},
+            applications=apps,
+        )
+
+        result = await pipeline_health(job_id=100, staleness_days=7, client=client)
+
+        stage = result["stages"][0]
+        assert stage["cold_count"] == 1
+
+    @pytest.mark.anyio
+    async def it_computes_unknown_share_as_division_not_multiplication(self) -> None:
+        """Line 130: unknown_count / total_active — 3/10=0.3, not 3*10=30."""
+        stages = [_make_stage(1, "Review", 0)]
+        known_apps = [_make_application(i, 100, 1, "Review", 1) for i in range(7)]
+        # stage_id=999 not in active_stages → goes to unknown bucket
+        unknown_apps = [_make_application(i + 100, 100, 999, "Deleted", 1) for i in range(3)]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Eng", "status": "open"}],
+            stages={100: stages},
+            applications=known_apps + unknown_apps,
+        )
+
+        result = await pipeline_health(job_id=100, client=client)
+
+        unknown_stage = next(s for s in result["stages"] if s["stage_id"] is None)
+        assert unknown_stage["share"] == pytest.approx(0.3, abs=0.01)
+
+    @pytest.mark.anyio
+    async def it_computes_unknown_avg_days_as_division_not_multiplication(self) -> None:
+        """Line 132: sum()/len() — avg of [3,9]=6.0, not 3*9=27."""
+        stages = [_make_stage(1, "Review", 0)]
+        unknown_apps = [
+            _make_application(1, 100, 999, "Deleted", 3),
+            _make_application(2, 100, 999, "Deleted", 9),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Eng", "status": "open"}],
+            stages={100: stages},
+            applications=unknown_apps,
+        )
+
+        result = await pipeline_health(job_id=100, client=client)
+
+        unknown_stage = next(s for s in result["stages"] if s["stage_id"] is None)
+        assert unknown_stage["avg_days_since_activity"] == pytest.approx(6.0, abs=0.5)
+
+    @pytest.mark.anyio
+    async def it_counts_unknown_cold_at_exact_staleness_boundary(self) -> None:
+        """Line 133: d >= staleness_days on unknown path — d==7 counts."""
+        stages = [_make_stage(1, "Review", 0)]
+        unknown_apps = [
+            _make_application(1, 100, 999, "Deleted", 7),
+            _make_application(2, 100, 999, "Deleted", 6),
+            _make_application(3, 100, 999, "Deleted", 8),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Eng", "status": "open"}],
+            stages={100: stages},
+            applications=unknown_apps,
+        )
+
+        result = await pipeline_health(job_id=100, staleness_days=7, client=client)
+
+        unknown_stage = next(s for s in result["stages"] if s["stage_id"] is None)
+        assert unknown_stage["cold_count"] == 2  # noqa: PLR2004
+
+    @pytest.mark.anyio
+    async def it_computes_unknown_stale_fraction_as_division(self) -> None:
+        """Line 134: unknown_cold / unknown_count — 2/3 not 2*3."""
+        stages = [_make_stage(1, "Review", 0)]
+        unknown_apps = [
+            _make_application(1, 100, 999, "Deleted", 10),
+            _make_application(2, 100, 999, "Deleted", 10),
+            _make_application(3, 100, 999, "Deleted", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Eng", "status": "open"}],
+            stages={100: stages},
+            applications=unknown_apps,
+        )
+
+        result = await pipeline_health(job_id=100, staleness_days=7, bottleneck_threshold=0.01, client=client)
+
+        unknown_stage = next(s for s in result["stages"] if s["stage_id"] is None)
+        assert unknown_stage["severity"] == "HIGH"
