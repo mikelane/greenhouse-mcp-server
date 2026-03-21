@@ -1597,3 +1597,39 @@ class DescribeNoActivityThresholdBoundary:
         no_act = [i for i in result["items"] if i["type"] == "no_activity"]
         assert len(no_act) == 1
         assert no_act[0]["days_overdue"] == 6  # noqa: PLR2004
+
+
+@pytest.mark.small
+class DescribeCacheHitBranches:
+    """Cover the cache-hit branches for candidate_cache and stages_cache."""
+
+    @pytest.mark.anyio
+    async def it_reuses_cached_candidate_and_stages_on_second_item(self) -> None:
+        """Lines 319->321, 326->328: second item for same candidate/job hits cache."""
+        now = datetime.now(tz=UTC)
+        client = FakeGreenhouseClient()
+        # Two stale apps from the SAME candidate and job → second hits cache
+        client.applications = [
+            _make_application(
+                app_id=1,
+                candidate_id=100,
+                last_activity_at=now - timedelta(days=10),
+            ),
+            _make_application(
+                app_id=2,
+                candidate_id=100,
+                last_activity_at=now - timedelta(days=12),
+            ),
+        ]
+        client.candidates = {
+            100: {"id": 100, "first_name": "Jane", "last_name": "Doe"},
+        }
+        client.job_stages = {
+            10: [{"id": 1, "name": "Phone Screen", "priority": 0, "active": True}],
+        }
+
+        result = await needs_attention(client=client, days_stale=7, now=now)
+
+        stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
+        assert len(stuck) == 2  # noqa: PLR2004
+        assert all(i["candidate_name"] == "Jane Doe" for i in stuck)
