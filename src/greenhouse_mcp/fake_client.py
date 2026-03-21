@@ -921,12 +921,16 @@ class FakeGreenhouseClient:
         *,
         job_id: int | None = None,
         email: str | None = None,
+        created_after: str | None = None,  # noqa: ARG002
+        updated_after: str | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         """Fetch candidates, optionally filtered.
 
         Args:
             job_id: Filter by job ID.
             email: Filter by email address.
+            created_after: ISO 8601 timestamp lower bound (accepted but not filtered).
+            updated_after: ISO 8601 timestamp lower bound (accepted but not filtered).
 
         Returns:
             List of candidate objects.
