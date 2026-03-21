@@ -473,6 +473,248 @@ class DescribeBottleneckDetection:
         assert result_strict["stages"][0]["cold_count"] == 1
         assert result_relaxed["stages"][0]["cold_count"] == 0
 
+    @pytest.mark.anyio
+    async def it_triggers_bottleneck_when_share_exactly_equals_threshold(self) -> None:
+        """Line 42: share >= threshold must trigger at equality, not just above."""
+        # 3 apps in stage A, 7 in stage B => share of A = 3/10 = 0.30 exactly
+        stages = [
+            _make_stage(1, "A", 0),
+            _make_stage(2, "B", 1),
+        ]
+        applications = [
+            _make_application(1, 100, 1, "A", 1),
+            _make_application(2, 100, 1, "A", 1),
+            _make_application(3, 100, 1, "A", 1),
+            _make_application(4, 100, 2, "B", 1),
+            _make_application(5, 100, 2, "B", 1),
+            _make_application(6, 100, 2, "B", 1),
+            _make_application(7, 100, 2, "B", 1),
+            _make_application(8, 100, 2, "B", 1),
+            _make_application(9, 100, 2, "B", 1),
+            _make_application(10, 100, 2, "B", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        stage_a = result["stages"][0]
+        assert stage_a["share"] == pytest.approx(0.30)
+        assert stage_a["severity"] == "MEDIUM"
+        assert stage_a["is_bottleneck"] is True
+
+    @pytest.mark.anyio
+    async def it_does_not_trigger_bottleneck_when_share_just_below_threshold(self) -> None:
+        """Line 42: share < threshold must NOT trigger bottleneck."""
+        # 2 apps in stage A, 7 in stage B => share of A = 2/9 ≈ 0.222
+        stages = [
+            _make_stage(1, "A", 0),
+            _make_stage(2, "B", 1),
+        ]
+        applications = [
+            _make_application(1, 100, 1, "A", 1),
+            _make_application(2, 100, 1, "A", 1),
+            _make_application(3, 100, 2, "B", 1),
+            _make_application(4, 100, 2, "B", 1),
+            _make_application(5, 100, 2, "B", 1),
+            _make_application(6, 100, 2, "B", 1),
+            _make_application(7, 100, 2, "B", 1),
+            _make_application(8, 100, 2, "B", 1),
+            _make_application(9, 100, 2, "B", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        stage_a = result["stages"][0]
+        assert stage_a["share"] < 0.30  # noqa: PLR2004
+        assert stage_a["severity"] is None
+        assert stage_a["is_bottleneck"] is False
+
+    @pytest.mark.anyio
+    async def it_triggers_staleness_when_stale_fraction_exactly_equals_threshold(self) -> None:
+        """Line 43: stale_fraction >= 0.50 must trigger at equality."""
+        # 2 apps in one stage: 1 stale, 1 fresh => stale_fraction = 1/2 = 0.50 exactly
+        # Low share to isolate staleness -> severity LOW
+        stages = [
+            _make_stage(1, "StaleTest", 0),
+            _make_stage(2, "Other1", 1),
+            _make_stage(3, "Other2", 2),
+            _make_stage(4, "Other3", 3),
+        ]
+        applications = [
+            _make_application(1, 100, 1, "StaleTest", 10),  # stale (>=7)
+            _make_application(2, 100, 1, "StaleTest", 1),  # fresh
+            _make_application(3, 100, 2, "Other1", 1),
+            _make_application(4, 100, 3, "Other2", 1),
+            _make_application(5, 100, 4, "Other3", 1),
+            _make_application(6, 100, 4, "Other3", 1),
+            _make_application(7, 100, 4, "Other3", 1),
+            _make_application(8, 100, 4, "Other3", 1),
+            _make_application(9, 100, 4, "Other3", 1),
+            _make_application(10, 100, 4, "Other3", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        stale_stage = result["stages"][0]
+        assert stale_stage["cold_count"] == 1
+        assert stale_stage["count"] == 2  # noqa: PLR2004
+        # stale_fraction = 1/2 = 0.50, share = 2/10 = 0.20 (below threshold)
+        # So severity should be LOW (stale but not concentrated)
+        assert stale_stage["severity"] == "LOW"
+
+    @pytest.mark.anyio
+    async def it_does_not_trigger_staleness_when_stale_fraction_just_below_threshold(self) -> None:
+        """Line 43: stale_fraction < 0.50 must NOT flag as stale."""
+        # 3 apps: 1 stale, 2 fresh => stale_fraction = 1/3 ≈ 0.333
+        # Low share to isolate staleness
+        stages = [
+            _make_stage(1, "NotStale", 0),
+            _make_stage(2, "Other", 1),
+        ]
+        applications = [
+            _make_application(1, 100, 1, "NotStale", 10),
+            _make_application(2, 100, 1, "NotStale", 1),
+            _make_application(3, 100, 1, "NotStale", 1),
+            _make_application(4, 100, 2, "Other", 1),
+            _make_application(5, 100, 2, "Other", 1),
+            _make_application(6, 100, 2, "Other", 1),
+            _make_application(7, 100, 2, "Other", 1),
+            _make_application(8, 100, 2, "Other", 1),
+            _make_application(9, 100, 2, "Other", 1),
+            _make_application(10, 100, 2, "Other", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        stage = result["stages"][0]
+        # stale_fraction = 1/3 ≈ 0.333 < 0.50, share = 3/10 = 0.30 (at threshold)
+        # Concentrated but not stale => MEDIUM
+        assert stage["severity"] == "MEDIUM"
+
+    @pytest.mark.anyio
+    async def it_counts_cold_when_days_exactly_equal_staleness_days(self) -> None:
+        """Line 106: d >= staleness_days must count at equality boundary."""
+        stages = [_make_stage(1, "Review", 0)]
+        applications = [
+            _make_application(1, 100, 1, "Review", 7),  # exactly 7 days
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(job_id=100, staleness_days=7, client=client)
+
+        assert result["stages"][0]["cold_count"] == 1
+
+    @pytest.mark.anyio
+    async def it_computes_stale_fraction_with_division_not_multiplication(self) -> None:
+        """Line 107: cold_count / count must be division, not multiplication.
+
+        With 3 cold out of 10 total: 3/10 = 0.30, but 3*10 = 30.
+        If stale_fraction were 30 instead of 0.30, severity would differ.
+        """
+        stages = [
+            _make_stage(1, "TestStage", 0),
+            _make_stage(2, "Other", 1),
+        ]
+        # 10 apps in TestStage: 3 stale, 7 fresh
+        applications = [
+            _make_application(1, 100, 1, "TestStage", 10),  # stale
+            _make_application(2, 100, 1, "TestStage", 10),  # stale
+            _make_application(3, 100, 1, "TestStage", 10),  # stale
+            _make_application(4, 100, 1, "TestStage", 1),
+            _make_application(5, 100, 1, "TestStage", 1),
+            _make_application(6, 100, 1, "TestStage", 1),
+            _make_application(7, 100, 1, "TestStage", 1),
+            _make_application(8, 100, 1, "TestStage", 1),
+            _make_application(9, 100, 1, "TestStage", 1),
+            _make_application(10, 100, 1, "TestStage", 1),
+            _make_application(11, 100, 2, "Other", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        test_stage = result["stages"][0]
+        assert test_stage["cold_count"] == 3  # noqa: PLR2004
+        assert test_stage["count"] == 10  # noqa: PLR2004
+        # stale_fraction = 3/10 = 0.30 < 0.50 threshold => NOT stale
+        # share = 10/11 ≈ 0.91 > 0.30 => concentrated
+        # Concentrated but not stale => MEDIUM (not HIGH)
+        assert test_stage["severity"] == "MEDIUM"
+
+    @pytest.mark.anyio
+    async def it_computes_share_correctly_with_exactly_one_active_app(self) -> None:
+        """Line 102: total_active > 0 boundary -- exactly 1 app must yield share 1.0."""
+        stages = [_make_stage(1, "Review", 0)]
+        applications = [_make_application(1, 100, 1, "Review", 1)]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        assert result["total_active"] == 1
+        assert result["stages"][0]["share"] == pytest.approx(1.0)
+        assert result["stages"][0]["count"] == 1
+
 
 @pytest.mark.small
 class DescribeMultiJobAggregation:
@@ -740,6 +982,149 @@ class DescribeEdgeCases:
         assert "Unknown/Deleted Stage" in result["bottlenecks"]
 
     @pytest.mark.anyio
+    async def it_computes_unknown_share_correctly_with_exactly_one_total_app(self) -> None:
+        """Line 130: unknown_share = unknown_count / total_active if total_active > 0.
+
+        Boundary: exactly 1 total_active app (which is in the unknown stage).
+        Must yield share=1.0, not 0.0.
+        """
+        stages = [_make_stage(1, "Active Stage", 0)]
+        applications = [
+            _make_application(1, 100, 999, "Ghost Stage", 10),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        unknown = [s for s in result["stages"] if s["stage_name"] == "Unknown/Deleted Stage"]
+        assert len(unknown) == 1
+        assert unknown[0]["share"] == pytest.approx(1.0)
+        assert unknown[0]["count"] == 1
+
+    @pytest.mark.anyio
+    async def it_computes_unknown_stale_fraction_with_division_not_multiplication(self) -> None:
+        """Line 132: unknown_cold / unknown_count must be division.
+
+        3 cold out of 10 unknown apps: 3/10=0.30 (below 0.50 threshold).
+        If multiplication: 3*10=30 (above threshold). Severity would differ.
+        """
+        stages = [_make_stage(1, "Active Stage", 0)]
+        applications = [
+            # 10 unknown apps: 3 stale, 7 fresh
+            _make_application(1, 100, 999, "Ghost", 10),
+            _make_application(2, 100, 999, "Ghost", 10),
+            _make_application(3, 100, 999, "Ghost", 10),
+            _make_application(4, 100, 999, "Ghost", 1),
+            _make_application(5, 100, 999, "Ghost", 1),
+            _make_application(6, 100, 999, "Ghost", 1),
+            _make_application(7, 100, 999, "Ghost", 1),
+            _make_application(8, 100, 999, "Ghost", 1),
+            _make_application(9, 100, 999, "Ghost", 1),
+            _make_application(10, 100, 999, "Ghost", 1),
+            # 1 in active stage to keep active stage present
+            _make_application(11, 100, 1, "Active Stage", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        unknown = [s for s in result["stages"] if s["stage_name"] == "Unknown/Deleted Stage"]
+        assert len(unknown) == 1
+        assert unknown[0]["cold_count"] == 3  # noqa: PLR2004
+        assert unknown[0]["count"] == 10  # noqa: PLR2004
+        # stale_fraction = 3/10 = 0.30 < 0.50 => NOT stale
+        # share = 10/11 ≈ 0.91 > 0.30 => concentrated
+        # Concentrated but not stale => MEDIUM (not HIGH)
+        assert unknown[0]["severity"] == "MEDIUM"
+
+    @pytest.mark.anyio
+    async def it_triggers_unknown_staleness_when_stale_fraction_exactly_equals_threshold(self) -> None:
+        """Line 133: unknown stale_fraction >= 0.50 must trigger at equality.
+
+        2 unknown apps: 1 stale, 1 fresh => stale_fraction = 0.50 exactly.
+        Low share to isolate => severity LOW.
+        """
+        stages = [_make_stage(1, "Active Stage", 0)]
+        applications = [
+            _make_application(1, 100, 999, "Ghost", 10),  # stale
+            _make_application(2, 100, 999, "Ghost", 1),  # fresh
+            # 8 more in active stage to make unknown share = 2/10 = 0.20
+            _make_application(3, 100, 1, "Active Stage", 1),
+            _make_application(4, 100, 1, "Active Stage", 1),
+            _make_application(5, 100, 1, "Active Stage", 1),
+            _make_application(6, 100, 1, "Active Stage", 1),
+            _make_application(7, 100, 1, "Active Stage", 1),
+            _make_application(8, 100, 1, "Active Stage", 1),
+            _make_application(9, 100, 1, "Active Stage", 1),
+            _make_application(10, 100, 1, "Active Stage", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        unknown = [s for s in result["stages"] if s["stage_name"] == "Unknown/Deleted Stage"]
+        assert len(unknown) == 1
+        assert unknown[0]["cold_count"] == 1
+        assert unknown[0]["count"] == 2  # noqa: PLR2004
+        # stale_fraction = 1/2 = 0.50 (exactly at threshold), share = 2/10 = 0.20 (below)
+        assert unknown[0]["severity"] == "LOW"
+
+    @pytest.mark.anyio
+    async def it_computes_unknown_cold_count_at_staleness_days_boundary(self) -> None:
+        """Line 134: unknown cold_count uses d >= staleness_days.
+
+        An unknown app with activity exactly staleness_days ago must be counted cold.
+        """
+        stages = [_make_stage(1, "Active Stage", 0)]
+        applications = [
+            _make_application(1, 100, 999, "Ghost", 7),  # exactly 7 days
+            _make_application(2, 100, 1, "Active Stage", 1),
+        ]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=applications,
+        )
+
+        result = await pipeline_health(
+            job_id=100,
+            bottleneck_threshold=0.30,
+            staleness_days=7,
+            client=client,
+        )
+
+        unknown = [s for s in result["stages"] if s["stage_name"] == "Unknown/Deleted Stage"]
+        assert len(unknown) == 1
+        assert unknown[0]["cold_count"] == 1
+
+    @pytest.mark.anyio
     async def it_returns_zero_share_when_no_applications(self) -> None:
         stages = [_make_stage(1, "Review", 0)]
         client = FakeGreenhouseClient(
@@ -753,3 +1138,42 @@ class DescribeEdgeCases:
         assert result["stages"][0]["share"] == 0.0
         assert result["stages"][0]["avg_days_since_activity"] == 0.0
         assert result["stages"][0]["cold_count"] == 0
+
+    @pytest.mark.anyio
+    async def it_treats_stage_without_active_key_as_active(self) -> None:
+        """Line 74: s.get('active', True) -- default True must include keyless stages."""
+        stage_without_key = {"id": 1, "name": "No Active Key", "priority": 0, "job_id": 100, "interviews": []}
+        applications = [_make_application(1, 100, 1, "No Active Key", 1)]
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: [stage_without_key]},
+            applications=applications,
+        )
+
+        result = await pipeline_health(job_id=100, client=client)
+
+        stage_names = [s["stage_name"] for s in result["stages"]]
+        assert "No Active Key" in stage_names
+        assert result["stages"][0]["count"] == 1
+
+    @pytest.mark.anyio
+    async def it_includes_application_without_prospect_key(self) -> None:
+        """Line 82: a.get('prospect', False) -- default False must include keyless apps."""
+        stages = [_make_stage(1, "Review", 0)]
+        app_without_prospect = {
+            "id": 1,
+            "status": "active",
+            "current_stage": {"id": 1, "name": "Review"},
+            "last_activity_at": _iso(1),
+            "jobs": [{"id": 100, "name": "Job 100"}],
+        }
+        client = FakeGreenhouseClient(
+            jobs=[{"id": 100, "name": "Engineer", "status": "open"}],
+            stages={100: stages},
+            applications=[app_without_prospect],
+        )
+
+        result = await pipeline_health(job_id=100, client=client)
+
+        assert result["total_active"] == 1
+        assert result["stages"][0]["count"] == 1
