@@ -294,7 +294,9 @@ async def _detect_pending_offers(  # noqa: PLR0913
             reference_time = _parse_date_string(sent_at_str)
             threshold_days = offer_sent_days
         else:
-            created_at_str = offer.get("created_at", "")
+            created_at_str = offer.get("created_at")
+            if not created_at_str:
+                continue
             reference_time = _parse_iso_timestamp(created_at_str)
             threshold_days = offer_draft_days
 

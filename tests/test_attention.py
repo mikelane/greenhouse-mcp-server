@@ -26,7 +26,7 @@ class FakeGreenhouseClient:
         *,
         job_id: int | None = None,
         status: str | None = None,
-        _created_after: str | None = None,
+        created_after: str | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         result = self.applications
         if job_id is not None:
@@ -66,27 +66,27 @@ class FakeGreenhouseClient:
     async def get_jobs(
         self,
         *,
-        _status: str | None = None,
-        _department_id: int | None = None,
+        status: str | None = None,  # noqa: ARG002
+        department_id: int | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return list(self.jobs.values())
 
     async def get_candidates(
         self,
         *,
-        _job_id: int | None = None,
-        _email: str | None = None,
+        job_id: int | None = None,  # noqa: ARG002
+        email: str | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return list(self.candidates.values())
 
     async def get_scheduled_interviews(
         self,
         *,
-        _application_id: int | None = None,
+        application_id: int | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return []
 
-    async def get_activity_feed(self, _candidate_id: int) -> dict[str, Any]:
+    async def get_activity_feed(self, candidate_id: int) -> dict[str, Any]:  # noqa: ARG002
         return {"notes": [], "emails": [], "activities": []}
 
 
@@ -686,6 +686,40 @@ class DescribeEdgeCases:
             assert len(item["suggested_action"]) > 0
 
     @pytest.mark.anyio
+    async def it_skips_offers_with_missing_created_at(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.offers = [
+            _make_offer(
+                status="unresolved",
+                created_at=now - timedelta(days=5),
+            ),
+        ]
+        # Remove created_at and sent_at to trigger the guard
+        client.offers[0]["created_at"] = ""
+        client.offers[0]["sent_at"] = None
+        result = await needs_attention(client=client, now=now)
+        pending = [i for i in result["items"] if i["type"] == "pending_offer"]
+        assert len(pending) == 0
+
+    @pytest.mark.anyio
+    async def it_skips_offers_with_no_created_at_key(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.offers = [
+            _make_offer(
+                status="unresolved",
+                created_at=now - timedelta(days=5),
+            ),
+        ]
+        # Remove the key entirely
+        del client.offers[0]["created_at"]
+        client.offers[0]["sent_at"] = None
+        result = await needs_attention(client=client, now=now)
+        pending = [i for i in result["items"] if i["type"] == "pending_offer"]
+        assert len(pending) == 0
+
+    @pytest.mark.anyio
     async def it_includes_detail_in_each_item(self) -> None:
         client = FakeGreenhouseClient()
         now = datetime.now(tz=UTC)
@@ -706,6 +740,281 @@ class DescribeEdgeCases:
         for item in result["items"]:
             assert "detail" in item
             assert len(item["detail"]) > 0
+
+    @pytest.mark.anyio
+    async def it_skips_stuck_application_with_null_last_activity(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        app = _make_application(last_activity_at=now - timedelta(days=10))
+        app["last_activity_at"] = None
+        client.applications = [app]
+        result = await needs_attention(client=client, days_stale=7, now=now)
+        stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
+        assert len(stuck) == 0
+
+    @pytest.mark.anyio
+    async def it_skips_no_activity_with_null_last_activity(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        app = _make_application(last_activity_at=now - timedelta(days=20))
+        app["last_activity_at"] = None
+        client.applications = [app]
+        result = await needs_attention(
+            client=client,
+            no_activity_days=14,
+            now=now,
+        )
+        no_act = [i for i in result["items"] if i["type"] == "no_activity"]
+        assert len(no_act) == 0
+
+    @pytest.mark.anyio
+    async def it_skips_scorecards_with_null_interviewed_at(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.applications = [
+            _make_application(last_activity_at=now - timedelta(hours=1)),
+        ]
+        sc = _make_scorecard(
+            application_id=1,
+            interviewed_at=now - timedelta(days=3),
+            submitted_at=None,
+        )
+        sc["interviewed_at"] = None
+        client.scorecards = {1: [sc]}
+        result = await needs_attention(client=client, now=now)
+        missing = [i for i in result["items"] if i["type"] == "missing_scorecard"]
+        assert len(missing) == 0
+
+    @pytest.mark.anyio
+    async def it_reuses_candidate_cache_across_multiple_stuck_apps(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.applications = [
+            _make_application(
+                app_id=1,
+                candidate_id=100,
+                last_activity_at=now - timedelta(days=10),
+            ),
+            _make_application(
+                app_id=2,
+                candidate_id=100,
+                last_activity_at=now - timedelta(days=10),
+            ),
+        ]
+        client.candidates = {
+            100: {"id": 100, "first_name": "Jane", "last_name": "Doe"},
+        }
+        client.job_stages = {
+            10: [
+                {"id": 1, "name": "Phone Screen", "priority": 0, "active": True},
+            ],
+        }
+        result = await needs_attention(client=client, days_stale=7, now=now)
+        stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
+        assert len(stuck) == 2  # noqa: PLR2004
+        assert all(s["candidate_name"] == "Jane Doe" for s in stuck)
+
+    @pytest.mark.anyio
+    async def it_reuses_stages_cache_across_multiple_stuck_apps(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.applications = [
+            _make_application(
+                app_id=1,
+                candidate_id=100,
+                job_id=10,
+                last_activity_at=now - timedelta(days=10),
+            ),
+            _make_application(
+                app_id=2,
+                candidate_id=200,
+                job_id=10,
+                last_activity_at=now - timedelta(days=10),
+            ),
+        ]
+        client.candidates = {
+            100: {"id": 100, "first_name": "Jane", "last_name": "Doe"},
+            200: {"id": 200, "first_name": "John", "last_name": "Smith"},
+        }
+        client.job_stages = {
+            10: [
+                {"id": 1, "name": "Phone Screen", "priority": 0, "active": True},
+                {"id": 2, "name": "Onsite", "priority": 1, "active": True},
+            ],
+        }
+        result = await needs_attention(client=client, days_stale=7, now=now)
+        stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
+        assert len(stuck) == 2  # noqa: PLR2004
+
+    @pytest.mark.anyio
+    async def it_uses_stage_position_zero_when_stage_not_found(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.applications = [
+            _make_application(
+                stage_id=999,
+                stage_name="Unknown Stage",
+                last_activity_at=now - timedelta(days=10),
+            ),
+        ]
+        client.candidates = {
+            100: {"id": 100, "first_name": "Jane", "last_name": "Doe"},
+        }
+        client.job_stages = {
+            10: [
+                {"id": 1, "name": "Phone Screen", "priority": 0, "active": True},
+                {"id": 2, "name": "Onsite", "priority": 1, "active": True},
+            ],
+        }
+        result = await needs_attention(client=client, days_stale=7, now=now)
+        stuck = [i for i in result["items"] if i["type"] == "stuck_application"]
+        assert len(stuck) == 1
+        assert 0 <= stuck[0]["priority_score"] <= 100  # noqa: PLR2004
+
+    @pytest.mark.anyio
+    async def it_reuses_candidate_cache_in_missing_scorecards(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.applications = [
+            _make_application(
+                app_id=1,
+                candidate_id=100,
+                last_activity_at=now - timedelta(hours=1),
+            ),
+            _make_application(
+                app_id=2,
+                candidate_id=100,
+                last_activity_at=now - timedelta(hours=1),
+            ),
+        ]
+        client.scorecards = {
+            1: [
+                _make_scorecard(
+                    application_id=1,
+                    candidate_id=100,
+                    interviewed_at=now - timedelta(days=3),
+                    submitted_at=None,
+                ),
+            ],
+            2: [
+                _make_scorecard(
+                    scorecard_id=2,
+                    application_id=2,
+                    candidate_id=100,
+                    interviewed_at=now - timedelta(days=3),
+                    submitted_at=None,
+                ),
+            ],
+        }
+        client.candidates = {
+            100: {"id": 100, "first_name": "Jane", "last_name": "Doe"},
+        }
+        client.job_stages = {
+            10: [
+                {"id": 1, "name": "Phone Screen", "priority": 0, "active": True},
+            ],
+        }
+        result = await needs_attention(client=client, now=now)
+        missing = [i for i in result["items"] if i["type"] == "missing_scorecard"]
+        assert len(missing) == 2  # noqa: PLR2004
+        assert all(m["candidate_name"] == "Jane Doe" for m in missing)
+
+    @pytest.mark.anyio
+    async def it_resolves_candidate_and_job_for_pending_offers(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.applications = [
+            _make_application(
+                app_id=1,
+                candidate_id=100,
+                job_id=10,
+                job_name="Backend Engineer",
+                last_activity_at=now - timedelta(hours=1),
+            ),
+        ]
+        client.offers = [
+            _make_offer(
+                application_id=1,
+                candidate_id=100,
+                job_id=10,
+                created_at=now - timedelta(days=5),
+                status="unresolved",
+            ),
+        ]
+        client.candidates = {
+            100: {"id": 100, "first_name": "Jane", "last_name": "Doe"},
+        }
+        client.job_stages = {
+            10: [
+                {"id": 1, "name": "Phone Screen", "priority": 0, "active": True},
+            ],
+        }
+        result = await needs_attention(client=client, now=now)
+        pending = [i for i in result["items"] if i["type"] == "pending_offer"]
+        assert len(pending) == 1
+        assert pending[0]["candidate_name"] == "Jane Doe"
+        assert pending[0]["job_name"] == "Backend Engineer"
+
+    @pytest.mark.anyio
+    async def it_handles_pending_offer_without_matching_application(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.applications = []
+        client.offers = [
+            _make_offer(
+                application_id=999,
+                candidate_id=100,
+                job_id=10,
+                created_at=now - timedelta(days=5),
+                status="unresolved",
+            ),
+        ]
+        client.candidates = {
+            100: {"id": 100, "first_name": "Jane", "last_name": "Doe"},
+        }
+        client.job_stages = {
+            10: [
+                {"id": 1, "name": "Phone Screen", "priority": 0, "active": True},
+            ],
+        }
+        result = await needs_attention(client=client, now=now)
+        pending = [i for i in result["items"] if i["type"] == "pending_offer"]
+        assert len(pending) == 1
+        assert pending[0]["job_name"] == "Unknown"
+
+    @pytest.mark.anyio
+    async def it_reuses_caches_across_no_activity_detection(self) -> None:
+        client = FakeGreenhouseClient()
+        now = datetime.now(tz=UTC)
+        client.applications = [
+            _make_application(
+                app_id=1,
+                candidate_id=100,
+                last_activity_at=now - timedelta(days=20),
+            ),
+            _make_application(
+                app_id=2,
+                candidate_id=100,
+                last_activity_at=now - timedelta(days=20),
+            ),
+        ]
+        client.candidates = {
+            100: {"id": 100, "first_name": "Jane", "last_name": "Doe"},
+        }
+        client.job_stages = {
+            10: [
+                {"id": 1, "name": "Phone Screen", "priority": 0, "active": True},
+            ],
+        }
+        result = await needs_attention(
+            client=client,
+            no_activity_days=14,
+            days_stale=100,
+            now=now,
+        )
+        no_act = [i for i in result["items"] if i["type"] == "no_activity"]
+        assert len(no_act) == 2  # noqa: PLR2004
+        assert all(n["candidate_name"] == "Jane Doe" for n in no_act)
 
     @pytest.mark.anyio
     async def it_deduplicates_no_activity_against_stuck_application(self) -> None:
