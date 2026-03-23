@@ -38,7 +38,7 @@ greenhouse-mcp = "greenhouse_mcp.server:main"
 dev = [
     "pytest>=9.0",
     "pytest-cov>=6.0",
-    "pytest-gremlins>=1.5",
+    "pytest-gremlins>=1.6.0b0",
     "pytest-test-categories>=1.2",
     "mypy>=1.19",
     "ruff>=0.15",
@@ -127,6 +127,9 @@ addopts = [
     "--cov-fail-under=100",
 ]
 test_categories_enforcement = "strict"
+
+[tool.uv]
+prerelease = "allow"
 
 [tool.pytest-gremlins]
 exclude = ["src/greenhouse_mcp/fake_client.py"]
