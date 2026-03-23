@@ -72,6 +72,7 @@ def _compute_recency_score(applications: list[dict[str, Any]]) -> float:
             ts = datetime.fromisoformat(last_activity.replace("Z", "+00:00"))
         except ValueError, AttributeError:
             continue
+        # gremlin: pardon[equivalent]  # noqa: ERA001
         if most_recent is None or ts > most_recent:
             most_recent = ts
 

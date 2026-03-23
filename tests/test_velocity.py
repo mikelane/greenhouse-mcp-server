@@ -581,6 +581,49 @@ class DescribeEdgeCases:
 
 
 @pytest.mark.small
+class DescribeMutantKillers:
+    @pytest.mark.anyio
+    async def it_ignores_department_filter_when_job_id_is_set(self) -> None:
+        """When both job_id and department_id are provided, job_id takes precedence."""
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+        client.jobs = [
+            {"id": 10, "departments": [{"id": 1, "name": "Engineering"}]},
+            {"id": 20, "departments": [{"id": 999, "name": "Marketing"}]},
+        ]
+        client.applications = [
+            {"id": 1, "created_at": _iso_at(now - timedelta(days=5)), "jobs": [{"id": 10}]},
+            {"id": 2, "created_at": _iso_at(now - timedelta(days=3)), "jobs": [{"id": 20}]},
+        ]
+
+        result = await hiring_velocity(
+            job_id=10,
+            department_id=999,
+            client=client,
+            now=now,
+            days=14,
+        )
+
+        assert result["total_applications"] == 1
+
+    @pytest.mark.anyio
+    async def it_counts_application_created_exactly_at_bucket_start(self) -> None:
+        """An application created at exactly a bucket boundary lands in that bucket."""
+        now = datetime(2026, 3, 15, tzinfo=UTC)
+        client = FakeGreenhouseClient()
+        bucket_start = now - timedelta(days=7)
+        client.applications = [
+            {"id": 1, "created_at": _iso_at(bucket_start), "jobs": [{"id": 10}]},
+        ]
+
+        result = await hiring_velocity(job_id=10, client=client, now=now, days=14)
+
+        buckets = result["weekly_buckets"]
+        bucket_for_start = next(b for b in buckets if b["week_start"] == bucket_start.date().isoformat())
+        assert bucket_for_start["count"] == 1
+
+
+@pytest.mark.small
 class DescribeBuildBucketsEdgeCases:
     @pytest.mark.anyio
     async def it_returns_empty_buckets_when_days_is_zero(self) -> None:

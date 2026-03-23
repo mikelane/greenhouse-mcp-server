@@ -2,6 +2,9 @@ version = 1
 revision = 3
 requires-python = ">=3.14"
 
+[options]
+prerelease-mode = "allow"
+
 [[package]]
 name = "aiofile"
 version = "3.9.0"
@@ -365,7 +368,7 @@ wheels = [
 
 [[package]]
 name = "greenhouse-mcp-server"
-version = "0.1.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "dioxide" },
@@ -397,7 +400,7 @@ dev = [
     { name = "mypy", specifier = ">=1.19" },
     { name = "pytest", specifier = ">=9.0" },
     { name = "pytest-cov", specifier = ">=6.0" },
-    { name = "pytest-gremlins", specifier = ">=1.5" },
+    { name = "pytest-gremlins", specifier = ">=1.6.0b0" },
     { name = "pytest-test-categories", specifier = ">=1.2" },
     { name = "ruff", specifier = ">=0.15" },
 ]
@@ -960,15 +963,15 @@ wheels = [
 
 [[package]]
 name = "pytest-gremlins"
-version = "1.5.1"
+version = "1.6.0b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coverage" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/39/9ea5990445b9423871f85115108cbee1161a754883c32780d05c7f1a1bc4/pytest_gremlins-1.5.1.tar.gz", hash = "sha256:7a936d5e720463fed7e0099ce07e0218cbbb9928451942f8181e8015d494646d", size = 3960939, upload-time = "2026-03-15T20:33:16.383Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/d2/bc2872638980e411d1d9dc31466145d46898f107bbf19c939c57535934a2/pytest_gremlins-1.6.0b0.tar.gz", hash = "sha256:ce2783588c29246af6adf4565d3135b5b2f6df3cfcd5ff723168886bca20840a", size = 3971895, upload-time = "2026-03-22T21:36:34.016Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/08/51/db2cddc3570a3e2a3cd244891c980599fd7a344455efc1a52d233062deae/pytest_gremlins-1.5.1-py3-none-any.whl", hash = "sha256:ae860879738a82ac6bc4a95765acb5a53c5bd615919e49f586a57c3398482266", size = 100390, upload-time = "2026-03-15T20:33:14.497Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/ed/18b7871db1091e12494c0d7c96f7ed6bba496d3e9244d19548d6e8c46516/pytest_gremlins-1.6.0b0-py3-none-any.whl", hash = "sha256:be4b34befbdf29521724527d8c40cd6b14af0ef857bf771c139bbf5876331f55", size = 102642, upload-time = "2026-03-22T21:36:32.39Z" },
 ]
 
 [[package]]

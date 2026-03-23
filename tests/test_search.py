@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from greenhouse_mcp.tools.search import search_talent
+from greenhouse_mcp.tools.search import _compute_recency_score, search_talent
 
 
 def _iso_ago(*, days: int = 0, hours: int = 0) -> str:
@@ -637,6 +637,22 @@ class DescribeApplicationEnrichment:
         result = await search_talent(client=client)
 
         assert result["results"][0]["email"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Recency score arithmetic (mutant killer: * vs /)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.small
+class DescribeRecencyScoreArithmetic:
+    @pytest.mark.anyio
+    async def it_computes_correct_recency_score_for_known_activity_age(self) -> None:
+        """An app with activity 15 days ago scores exactly 12.5 (not 50.0 if * were /)."""
+        fifteen_days_ago = (datetime.now(tz=UTC) - timedelta(days=15)).isoformat()
+        apps: list[dict[str, Any]] = [{"last_activity_at": fifteen_days_ago}]
+        score = _compute_recency_score(apps)
+        assert score == pytest.approx(12.5, abs=0.5)
 
 
 # ---------------------------------------------------------------------------
